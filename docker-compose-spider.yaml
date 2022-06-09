@@ -1,0 +1,12 @@
+version: "3.7"
+services:
+  scraper:
+    build:
+      context: .
+      dockerfile: Dockerfile_spider
+    env_file:
+      - ./DB/.env
+      - ./scraper/.env
+    network_mode: host
+    volumes:
+      - .:/app
