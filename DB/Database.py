@@ -31,7 +31,7 @@ class Database:
             )
             self.cur = self.conn.cursor()
             
-            self.cur.execute("CREATE TABLE IF NOT EXISTS link (id INT NOT NULL AUTO_INCREMENT, url VARCHAR(255) NOT NULL, wordrelation_id INT NOT NULL, PRIMARY KEY (id))")
+            self.cur.execute("CREATE TABLE IF NOT EXISTS link (id INT NOT NULL AUTO_INCREMENT, url VARCHAR(255) NOT NULL, PRIMARY KEY (id))")
             self.cur.execute("CREATE TABLE IF NOT EXISTS word (id INT NOT NULL AUTO_INCREMENT, word VARCHAR(255) NOT NULL, PRIMARY KEY (id))")
             self.cur.execute("CREATE TABLE IF NOT EXISTS wordrelation (word_id INT NOT NULL, link_id INT NOT NULL, weight INT, PRIMARY KEY (word_id, link_id), FOREIGN KEY (word_id) REFERENCES word(id), FOREIGN KEY (link_id) REFERENCES link(id))")
         except mariadb.Error as e:
@@ -53,15 +53,16 @@ class Database:
         '''Please provide a string of tablename + columnname the value should be added at. Values can also be a list of values with 
         the same pattern.
         Example: insert_into_single_table(Database.Table.word.value, "'test'") <word>
-        Example: insert_into_single_table(Database.Table.link.value, "'www.heidenheim.dhbw.de/', 1") <url>, <wordrelation_id>
-        Example: insert_into_single_table(Database.Table.wordrelation.value, 1, 1, 1") <word_id>, <link_id>, <weight>
+        Example: insert_into_single_table(Database.Table.link.value, "'www.heidenheim.dhbw.de/'") <url>
+        Example: insert_into_single_table(Database.Table.wordrelation.value, "1, 1, 1") <word_id>, <link_id>, <weight>
         '''
+
         if(table == self.Table.word.value):
-            mySql_insert_query = f"INSERT INTO {table} VALUES ({values})"
+            mySql_insert_query = f"INSERT INTO word (word) VALUES ({values})"
         elif(table == self.Table.link.value):
-            mySql_insert_query = f"INSERT INTO {table} VALUES ({values})"
+            mySql_insert_query = f"INSERT INTO link (url) VALUES ({values})"
         elif(table == self.Table.wordrelation.value):
-            mySql_insert_query = f"INSERT INTO {table} VALUES ({values})"
+            mySql_insert_query = f"INSERT INTO wordrelation (word_id, link_id, weight) VALUES ({values})"
         try:
             self.cur.execute(mySql_insert_query, values)
             self.conn.commit()
@@ -73,14 +74,14 @@ class Database:
         '''Please provide a string of tablename + columnname the value should be added at. Values can also be a list of values with 
         the same pattern.
         Example: insert_multiple_into_single_table(Database.Table.word.value, [("wordTuple1",), ("<word>",)])  - IMPORTANT the comma afterwards is needed
-                 insert_multiple_into_single_table(Database.Table.link.value, [("'https://stackoverflow.com/'", 1), ("'<url>'", <wordrelation_id>)])
+                 insert_multiple_into_single_table(Database.Table.link.value, [("'https://stackoverflow.com/'",), ("'<url>'",)])
                  insert_multiple_into_single_table(Database.Table.wordrelation.value, [(1, 1, 1), (<word_id>, <link_id>, <weight>)])   
         '''
 
         if(table == self.Table.word.value):
             mySql_insert_query = """INSERT INTO word (word) VALUES (%s)"""
         elif(table == self.Table.link.value):
-            mySql_insert_query = """INSERT INTO link (url, wordrelation_id) VALUES (%s, %s)"""
+            mySql_insert_query = """INSERT INTO link (url) VALUES (%s)"""
         elif(table == self.Table.wordrelation.value):
             mySql_insert_query = """INSERT INTO wordrelation (word_id, link_id, weight) VALUES (%s, %s, %s)"""
 
