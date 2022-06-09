@@ -1,9 +1,9 @@
 streamlit
 environs
 mariadb
-nltk
 scrapy
 beautifulsoup4
 polyglot
 pycld2
 pyicu
+spacy

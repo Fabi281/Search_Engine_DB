@@ -2,22 +2,20 @@ from environs import Env
 import sys
 from polyglot.detect import Detector
 from scrapy.crawler import CrawlerProcess
-from nltk.tokenize import RegexpTokenizer
 from bs4 import BeautifulSoup
 import os
 import scrapy
-import nltk
-from nltk.corpus import stopwords
-nltk.download('stopwords')
-nltk.download('punkt')
 
+import spacy
 
 sys.path.append("..")
 from DB.Database import Database
 
-
 env = Env()
 env.read_env()
+
+nlp_en = spacy.load("en_core_web_sm")
+nlp_de = spacy.load("de_core_news_sm")
 
 class MySpider(scrapy.Spider):
     db = None
@@ -46,19 +44,22 @@ class MySpider(scrapy.Spider):
         detector = Detector(text)
 
         language = detector.language.name.lower()
+        
+        if language == "english":
+            nlp = nlp_en
+        elif language == "german":
+            nlp = nlp_de
+        else:
+            nlp = nlp_en
+        
+        doc = nlp(text)
 
-        # remove stop words from text
-        stop_words = set(stopwords.words(language))
-
-        # tokenizer = RegexpTokenizer(r'[A-Za-zÀ-ž\u0370-\u03FF\u0400-\u04FF]+')
-        # words = tokenizer.tokenize(text)
-        words = nltk.tokenize.word_tokenize(text, language=language)
-        filtered_words = [
-            w for w in words if not w in stop_words and w.isalpha()]
+        # get all lemmas
+        lemmas = [token.lemma_.lower() for token in doc if token.is_alpha == True and token.is_stop == False]
 
         # count words in text
         word_count = {}
-        for word in filtered_words:
+        for word in lemmas:
             if word in word_count:
                 word_count[word] += 1
             else:
@@ -68,10 +69,10 @@ class MySpider(scrapy.Spider):
         # self.db.insert_single_into_single_table(Database.Table.link.value, (response.url,))
 
         # save sorted word count to pages/{language}/{url}.txt
-        # os.makedirs('pages/' + language, exist_ok=True)
-        # with open(f'pages/{language}/{response.url.split("/")[-1]}.txt', 'w') as f:
-        #     for word in sorted(word_count, key=word_count.get, reverse=True):
-        #         f.write(f'{word}: {word_count[word]}\n')
+        os.makedirs('pages/' + language, exist_ok=True)
+        with open(f'pages/{language}/{response.url.split("/")[-1]}.txt', 'w') as f:
+            for word in sorted(word_count, key=word_count.get, reverse=True):
+                f.write(f'{word}: {word_count[word]}\n')
 
         for href in response.xpath('//a/@href').getall():
             if not(href.startswith('tel') or href.startswith('javascript') or href.startswith('mailto')):
@@ -86,7 +87,7 @@ if __name__ == "__main__":
         'ROBOTSTXT_OBEY': True,
         'ROBOTSTXT_USER_AGENT': '*',
         'SPIDER_MIDDLEWARES': {
-            'scraper.middlewares.MimeFilterMiddleware.MimeFilterMiddleware': 999,
+            'scraper.MimeFilterMiddleware.MimeFilterMiddleware': 999,
         }
     })
 
