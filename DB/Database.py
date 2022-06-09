@@ -62,11 +62,11 @@ class Database:
 
         # Ich bin aktuell noch auf Python 3.9 deswegen kein Match
         if(table == self.Table.word.value):
-            mySql_insert_query = "INSERT IGNORE INTO word (word) VALUES (%s)" % value[0]
+            mySql_insert_query = """INSERT INTO word (word) VALUES (%s) ON DUPLICATE KEY UPDATE word = %s""" % (value[0], value[0])
         elif(table == self.Table.link.value):
-            mySql_insert_query = """INSERT IGNORE INTO link (url, language) VALUES (%s, %s)""" % (value[0], value[1])
+            mySql_insert_query = """INSERT INTO link (url, language) VALUES (%s, %s) ON DUPLICATE KEY UPDATE url = %s""" % (value[0], value[1], value[0])
         elif(table == self.Table.wordrelation.value):
-            mySql_insert_query = """INSERT IGNORE wordrelation (word_id, link_id, weight) VALUES (%s, %s, %s)""" % (value[0], value[1], value[2])
+            mySql_insert_query = """INSERT wordrelation (word_id, link_id, weight) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE word_id = %s""" % (value[0], value[1], value[2], value[0])
 
         try:
             self.cur.execute(mySql_insert_query)
@@ -75,7 +75,7 @@ class Database:
                 print(f"Error: {e}")
 
         if(table == self.Table.word.value):
-            id = self.get_from_query("SELECT id FROM word WHERE word = %s" % value[0])
+            id = self.get_from_query(f"SELECT id FROM word WHERE word = {value[0]}")
         elif(table == self.Table.link.value):
             id = self.get_from_query(f"SELECT id FROM link WHERE link.url = {value[0]} AND link.language = {value[1]}")
         elif(table == self.Table.wordrelation.value):
@@ -93,16 +93,18 @@ class Database:
         '''
 
         id = None
+        #Append first value for update query so it can be used in the loop and duplicates are ignored
+        values_with_duplicate_protection = [value + (value[0],) for value in values]
 
         if(table == self.Table.word.value):
-            mySql_insert_query = """INSERT IGNORE INTO word (word) VALUES (%s)"""
+            mySql_insert_query = """INSERT INTO word (word) VALUES (%s) ON DUPLICATE KEY UPDATE word = %s"""
         elif(table == self.Table.link.value):
-            mySql_insert_query = """INSERT IGNORE INTO link (url, language) VALUES (%s, %s)"""
+            mySql_insert_query = """INSERT INTO link (url, language) VALUES (%s, %s) ON DUPLICATE KEY UPDATE url = %s"""
         elif(table == self.Table.wordrelation.value):
-            mySql_insert_query = """INSERT IGNORE INTO wordrelation (word_id, link_id, weight) VALUES (%s, %s, %s)"""
+            mySql_insert_query = """INSERT INTO wordrelation (word_id, link_id, weight) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE word_id = %s"""
 
         try:
-            self.cur.executemany(mySql_insert_query, values)
+            self.cur.executemany(mySql_insert_query, values_with_duplicate_protection)
             self.conn.commit()
         except mariadb.Error as e:
                 print(f"Error: {e}")
@@ -135,3 +137,4 @@ class Database:
             print(f"Error: {e}")
             return False
         return self.cur.fetchall()
+        
