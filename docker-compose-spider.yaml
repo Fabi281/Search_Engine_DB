@@ -1,0 +1,15 @@
+version: "3.7"
+services:
+  scraper:
+    build:
+      context: .
+      dockerfile: Dockerfile_spider
+    environment:
+      - ALLOWED_DOMAINS=www.heidenheim.dhbw.de     # list seperated by ;
+      - START_URLS=https://www.heidenheim.dhbw.de/ # list seperated by ;
+      - SPIDER_NAME=heidenheim_spider
+    env_file:
+      - ./DB/.env
+    network_mode: host
+    volumes:
+      - .:/app
