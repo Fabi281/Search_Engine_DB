@@ -1,4 +1,3 @@
-# docker-compose to build the image and set up a mariadb database
 version: "3.7"
 services:
   mariadb:
