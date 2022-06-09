@@ -33,7 +33,7 @@ class MySpider(scrapy.Spider):
     def parse(self, response):
         # save url to pages.txt
         with open('pages.txt', 'a') as f:
-            f.write('start '+ response.url + '\n')
+            f.write(response.url + '\n')
 
 
         # extract all text from website using beautifulsoup
@@ -66,9 +66,6 @@ class MySpider(scrapy.Spider):
             else:
                 word_count[word] = 1
 
-        with open('pages.txt', 'a') as f:
-            f.write('parsed '+ response.url + '\n')
-
         words = [(word,) for word in word_count]
         word_ids = self.db.insert_multiple_into_single_table(Database.Table.word.value, words)
         word_map = zip(words, word_ids)
@@ -84,9 +81,6 @@ class MySpider(scrapy.Spider):
         #     for word in sorted(word_count, key=word_count.get, reverse=True):
         #         f.write(f'{word}: {word_count[word]}\n')
 
-        
-        with open('pages.txt', 'a') as f:
-            f.write('finish '+ response.url + '\n')
 
         for href in response.xpath('//a/@href').getall():
             if not(href.startswith('tel') or href.startswith('javascript') or href.startswith('mailto')):
