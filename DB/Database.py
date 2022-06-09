@@ -135,10 +135,3 @@ class Database:
             print(f"Error: {e}")
             return False
         return self.cur.fetchall()
-
-
-words = [("wordTuple6",), ("wordTuple1",), ("wordTuple35",)]
-database = Database()
-
-database.insert_multiple_into_single_table(Database.Table.word.value, words)
-print(database.get_from_query("SELECT * FROM word"))
