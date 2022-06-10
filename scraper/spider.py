@@ -38,7 +38,7 @@ class MySpider(scrapy.Spider):
 
         # extract all text from website using beautifulsoup
         soup = BeautifulSoup(response.text, features="lxml")
-        text = soup.getText(" ")
+        text = soup.title.string + " " + soup.getText(" ")
 
         # detect language of website
         detector = Detector(text)
@@ -69,7 +69,7 @@ class MySpider(scrapy.Spider):
         words = [(word,) for word in word_count]
         word_ids = self.db.insert_multiple_into_single_table(Database.Table.word.value, words)
         word_map = zip(words, word_ids)
-        link_id = self.db.insert_single_into_single_table(Database.Table.link.value, (response.url, language))
+        link_id = self.db.insert_single_into_single_table(Database.Table.link.value, (response.url, language, soup.title.string))
         self.db.insert_multiple_into_single_table(Database.Table.wordrelation.value,
         [(word_id[0], link_id[0][0], word_count[word]) for ((word,), word_id) in word_map])
 

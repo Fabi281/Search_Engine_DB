@@ -31,7 +31,7 @@ class Database:
             )
             self.cur = self.conn.cursor()
             
-            self.cur.execute("CREATE TABLE IF NOT EXISTS link (id INT NOT NULL AUTO_INCREMENT, url VARCHAR(255), language VARCHAR(255)  NOT NULL, PRIMARY KEY (id), UNIQUE (url))")
+            self.cur.execute("CREATE TABLE IF NOT EXISTS link (id INT NOT NULL AUTO_INCREMENT, url VARCHAR(255), language VARCHAR(255) NOT NULL, title VARCHAR(255), PRIMARY KEY (id), UNIQUE (url))")
             self.cur.execute("CREATE TABLE IF NOT EXISTS word (id INT NOT NULL AUTO_INCREMENT, word VARCHAR(255) NOT NULL, PRIMARY KEY (id), UNIQUE (word))")
             self.cur.execute("CREATE TABLE IF NOT EXISTS wordrelation (word_id INT NOT NULL, link_id INT NOT NULL, weight INT, PRIMARY KEY (word_id, link_id), FOREIGN KEY (word_id) REFERENCES word(id), FOREIGN KEY (link_id) REFERENCES link(id))")
         except mariadb.Error as e:
@@ -58,28 +58,28 @@ class Database:
         '''
 
         id = None
-        value = ["'%s'" % w for w in value]
+        value += (value[0],)
 
         # Ich bin aktuell noch auf Python 3.9 deswegen kein Match
         if(table == self.Table.word.value):
-            mySql_insert_query = """INSERT INTO word (word) VALUES (%s) ON DUPLICATE KEY UPDATE word = %s""" % (value[0], value[0])
+            mySql_insert_query = """INSERT INTO word (word) VALUES (%s) ON DUPLICATE KEY UPDATE word = %s"""
         elif(table == self.Table.link.value):
-            mySql_insert_query = """INSERT INTO link (url, language) VALUES (%s, %s) ON DUPLICATE KEY UPDATE url = %s""" % (value[0], value[1], value[0])
+            mySql_insert_query = """INSERT INTO link (url, language, title) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE url = %s"""
         elif(table == self.Table.wordrelation.value):
-            mySql_insert_query = """INSERT wordrelation (word_id, link_id, weight) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE word_id = %s""" % (value[0], value[1], value[2], value[0])
+            mySql_insert_query = """INSERT wordrelation (word_id, link_id, weight) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE word_id = %s"""
 
         try:
-            self.cur.execute(mySql_insert_query)
+            self.cur.execute(mySql_insert_query, value)
             self.conn.commit()
         except mariadb.Error as e:
                 print(f"Error: {e}")
 
         if(table == self.Table.word.value):
-            id = self.get_from_query(f"SELECT id FROM word WHERE word = {value[0]}")
+            id = self.get_from_query(f'SELECT id FROM word WHERE word = "{self.conn.escape_string(value[0])}"')
         elif(table == self.Table.link.value):
-            id = self.get_from_query(f"SELECT id FROM link WHERE link.url = {value[0]} AND link.language = {value[1]}")
+            id = self.get_from_query(f'SELECT id FROM link WHERE link.url = "{self.conn.escape_string(value[0])}" AND link.language = "{self.conn.escape_string(value[1])}"')
         elif(table == self.Table.wordrelation.value):
-            id = self.get_from_query(f"SELECT word_id, link_id FROM wordrelation WHERE wordrelation.word_id = {value[0]} AND wordrelation.link_id = {value[1]} AND wordrelation.weight = {value[2]}")
+            id = self.get_from_query(f'SELECT word_id, link_id FROM wordrelation WHERE wordrelation.word_id = {value[0]} AND wordrelation.link_id = {value[1]} AND wordrelation.weight = {value[2]}')
 
         return id
     
@@ -99,7 +99,7 @@ class Database:
         if(table == self.Table.word.value):
             mySql_insert_query = """INSERT INTO word (word) VALUES (%s) ON DUPLICATE KEY UPDATE word = %s"""
         elif(table == self.Table.link.value):
-            mySql_insert_query = """INSERT INTO link (url, language) VALUES (%s, %s) ON DUPLICATE KEY UPDATE url = %s"""
+            mySql_insert_query = """INSERT INTO link (url, language, title) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE url = %s"""
         elif(table == self.Table.wordrelation.value):
             mySql_insert_query = """INSERT INTO wordrelation (word_id, link_id, weight) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE word_id = %s"""
 
@@ -110,18 +110,19 @@ class Database:
                 print(f"Error: {e}")
         
         if(table == self.Table.word.value):
-            valuelist = ', '.join(['"%s"' % w[0] for w in values])
+            valuelist = ', '.join([
+                f'"{self.conn.escape_string(w[0])}"' for w in values])
 
             id = self.get_from_query(f"SELECT id FROM word WHERE word.word IN ({valuelist}) ORDER BY FIELD(word.word,{valuelist})")
         elif(table == self.Table.link.value):
-            valuelist_url = ', '.join(['"%s"' % w[0] for w in values])
-            valuelist_language = ', '.join(['"%s"' % w[1] for w in values])
+            valuelist_url = ', '.join([f'"{self.conn.escape_string(w[0])}"' for w in values])
+            valuelist_language = ', '.join([f'"{self.conn.escape_string(w[1])}"' for w in values])
 
             id = self.get_from_query(f"SELECT id FROM link WHERE link.url IN ({valuelist_url}) AND link.language IN ({valuelist_language}) ORDER BY FIELD(link.url,{valuelist_url})")
         elif(table == self.Table.wordrelation.value):
-            valuelist_word_id = ', '.join(['"%s"' % w[0] for w in values])
-            valuelist_link_id = ', '.join(['"%s"' % w[1] for w in values])
-            valuelist_weight = ', '.join(['"%s"' % w[2] for w in values])
+            valuelist_word_id = ', '.join([f'"{w[0]}"' for w in values])
+            valuelist_link_id = ', '.join([f'"{w[1]}"' for w in values])
+            valuelist_weight = ', '.join([f'"{w[2]}"' for w in values])
 
             id = self.get_from_query(f"SELECT word_id, link_id FROM wordrelation WHERE word_id IN ({valuelist_word_id}) AND wordrelation.link_id IN ({valuelist_link_id}) AND  wordrelation.weight IN ({valuelist_weight})")
         
