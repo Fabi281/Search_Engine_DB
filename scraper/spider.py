@@ -71,13 +71,13 @@ class MySpider(scrapy.Spider):
         word_map = zip(words, word_ids)
         link_id = self.db.insert_single_into_single_table(Database.Table.link.value, (response.url, language))
         self.db.insert_multiple_into_single_table(Database.Table.wordrelation.value,
-        [(word_id[0], link_id[0], word_count[word]) for ((word,), word_id) in word_map])
+        [(word_id[0], link_id[0][0], word_count[word]) for ((word,), word_id) in word_map])
 
 
 
-        # save sorted word count to pages/{language}/{url}.txt
+        # save sorted word count to pages/{language}/{url}.txt´
         # os.makedirs('pages/' + language, exist_ok=True)
-        # with open(f'pages/{language}/{response.url.split("/")[-1]}.txt', 'w') as f:
+        # with open(f'pages/{language}/{response.url.replace("/", "_")}.txt', 'w') as f:
         #     for word in sorted(word_count, key=word_count.get, reverse=True):
         #         f.write(f'{word}: {word_count[word]}\n')
 

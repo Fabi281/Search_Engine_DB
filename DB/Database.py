@@ -112,12 +112,12 @@ class Database:
         if(table == self.Table.word.value):
             valuelist = ', '.join(['"%s"' % w[0] for w in values])
 
-            id = self.get_from_query(f"SELECT id FROM word WHERE word.word IN ({valuelist})")
+            id = self.get_from_query(f"SELECT id FROM word WHERE word.word IN ({valuelist}) ORDER BY FIELD(word.word,{valuelist})")
         elif(table == self.Table.link.value):
             valuelist_url = ', '.join(['"%s"' % w[0] for w in values])
             valuelist_language = ', '.join(['"%s"' % w[1] for w in values])
 
-            id = self.get_from_query(f"SELECT id FROM link WHERE link.url IN ({valuelist_url}) AND link.language IN ({valuelist_language})")
+            id = self.get_from_query(f"SELECT id FROM link WHERE link.url IN ({valuelist_url}) AND link.language IN ({valuelist_language}) ORDER BY FIELD(link.url,{valuelist_url})")
         elif(table == self.Table.wordrelation.value):
             valuelist_word_id = ', '.join(['"%s"' % w[0] for w in values])
             valuelist_link_id = ', '.join(['"%s"' % w[1] for w in values])
