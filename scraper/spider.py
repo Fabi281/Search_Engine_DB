@@ -5,17 +5,22 @@ from scrapy.crawler import CrawlerProcess
 from bs4 import BeautifulSoup
 import os
 import scrapy
-
+import regex
 import spacy
 
 sys.path.append("..")
 from DB.Database import Database
+
+from polyglot.detect.base import logger as polyglot_logger
+polyglot_logger.setLevel("ERROR")
 
 env = Env()
 env.read_env()
 
 nlp_en = spacy.load("en_core_web_sm")
 nlp_de = spacy.load("de_core_news_sm")
+
+RE_BAD_CHARS = regex.compile(r"[\p{Cc}\p{Cs}]+")
 
 class MySpider(scrapy.Spider):
     db = None
@@ -31,14 +36,21 @@ class MySpider(scrapy.Spider):
         self.allowed_domains = env("ALLOWED_DOMAINS").split(';')
 
     def parse(self, response):
-        # save url to pages.txt
-        with open('pages.txt', 'a') as f:
-            f.write(response.url + '\n')
+        # # save url to pages.txt
+        # with open('pages.txt', 'a') as f:
+        #     f.write(response.url + '\n')
 
 
         # extract all text from website using beautifulsoup
         soup = BeautifulSoup(response.text, features="lxml")
-        text = soup.title.string + " " + soup.getText(" ")
+        text = soup.getText(" ")
+        if soup.title is not None:
+            text = soup.title.text + " " + text
+        else:
+            print("No title found for " + response.url)
+
+        # remove bad characters
+        text = RE_BAD_CHARS.sub(" ", text)
 
         # detect language of website
         detector = Detector(text)
@@ -56,7 +68,6 @@ class MySpider(scrapy.Spider):
 
         # get all lemmas
         lemmas = [token.lemma_.lower() for token in doc if token.is_alpha == True and token.is_stop == False]
-        len_lemmas = len(lemmas)
 
         # count words in text
         word_count = {}
@@ -67,12 +78,17 @@ class MySpider(scrapy.Spider):
                 word_count[word] = 1
 
         words = [(word,) for word in word_count]
-        word_ids = self.db.insert_multiple_into_single_table(Database.Table.word.value, words)
-        word_map = zip(words, word_ids)
-        link_id = self.db.insert_single_into_single_table(Database.Table.link.value, (response.url, language, soup.title.string))
-        self.db.insert_multiple_into_single_table(Database.Table.wordrelation.value,
-        [(word_id[0], link_id[0][0], word_count[word]) for ((word,), word_id) in word_map])
-
+        if len(words) > 0:
+            word_ids = self.db.insert_multiple_into_single_table(Database.Table.word.value, words)
+            word_map = zip(words, word_ids)
+            link_id = self.db.insert_single_into_single_table(Database.Table.link.value, (response.url, language, soup.title.string))
+            try:
+                self.db.insert_multiple_into_single_table(Database.Table.wordrelation.value,
+                [(word_id[0], link_id[0][0], word_count[word]) for ((word,), word_id) in word_map])
+            except Exception as e:
+                print(e)
+                print(word_map[0])
+                
 
 
         # save sorted word count to pages/{language}/{url}.txt´
@@ -83,7 +99,7 @@ class MySpider(scrapy.Spider):
 
 
         for href in response.xpath('//a/@href').getall():
-            if not(href.startswith('tel') or href.startswith('javascript') or href.startswith('mailto')):
+            if not(href.startswith('tel') or href.startswith('javascript') or href.startswith('mailto') or href.startswith('webcal')):
                 url = response.urljoin(href)
                 yield scrapy.Request(url, callback=self.parse)
 
@@ -96,7 +112,10 @@ if __name__ == "__main__":
         'ROBOTSTXT_USER_AGENT': '*',
         'SPIDER_MIDDLEWARES': {
             'scraper.MimeFilterMiddleware.MimeFilterMiddleware': 999,
-        }
+        },
+        'CONCURRENT_REQUESTS': 32,
+        'CONCURRENT_REQUESTS_PER_DOMAIN': 32,
+
     })
 
     crawler = process.create_crawler(MySpider)

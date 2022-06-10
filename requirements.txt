@@ -7,3 +7,4 @@ polyglot
 pycld2
 pyicu
 spacy
+regex
