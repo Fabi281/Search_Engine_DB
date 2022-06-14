@@ -134,6 +134,10 @@ class Database:
             id = self.get_from_query(f"SELECT word_id, link_id FROM wordrelation WHERE word_id IN ({valuelist_word_id}) AND wordrelation.link_id IN ({valuelist_link_id}) AND  wordrelation.weight IN ({valuelist_weight})")
         
         return id
+
+    def get_all_languages(self):
+        '''Returns a list of all languages'''
+        return self.get_from_query("SELECT DISTINCT language FROM link")
     
     def test_my_connection(self):
         '''
