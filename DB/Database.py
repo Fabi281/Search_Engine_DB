@@ -201,6 +201,17 @@ class Database:
         """)
         return [result[0] for result in results]
 
+    def predict_word2(self, word):
+        results = self.get_from_query(f"""
+        SELECT
+            word
+        from
+            word
+        where
+            MATCH (word) AGAINST ('{self.conn.escape_string(word)}' in boolean mode);
+        """)
+        return [result[0] for result in results]
+
     def test_my_connection(self):
         '''
         Test your connection to the MariaDB Database by executing a simple query (Fetch all words).
