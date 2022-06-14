@@ -142,8 +142,8 @@ class Database:
         '''Returns a list of all languages'''
         return self.get_from_query("SELECT DISTINCT language FROM link")
 
-    def search_word(self, word, language, page=1, limit=10):
-        '''Returns a list of all links that contain the word'''
+    def search_db_for_query(self, query, language, page=1, limit=10):
+        '''Returns a list of all links that contain the search query'''
         results =  self.get_from_query(f"""
         WITH selected_word_relations AS (
         SELECT
@@ -156,7 +156,7 @@ class Database:
             JOIN word on word.id = wordrelation.word_id
             JOIN link on link.id = wordrelation.link_id
         WHERE
-            MATCH (word.word) AGAINST ('{self.conn.escape_string(word)}' in boolean mode)
+            MATCH (word.word) AGAINST ('{self.conn.escape_string(query)}' in boolean mode)
             AND link.language = '{self.conn.escape_string(language)}'
         )
         SELECT
