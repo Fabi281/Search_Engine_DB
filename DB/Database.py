@@ -142,7 +142,7 @@ class Database:
         '''Returns a list of all languages'''
         return self.get_from_query("SELECT DISTINCT language FROM link")
 
-    def search_db_for_query(self, query, language, page=1, limit=10):
+    def search_db_with_query(self, query, language, page=1, limit=10):
         '''Returns a list of all links that contain the search query'''
         results =  self.get_from_query(f"""
         WITH selected_word_relations AS (
