@@ -1,7 +1,9 @@
-import mariadb
+import pymysql
 import sys
 from environs import Env
 from enum import Enum
+
+from regex import R
 env = Env()
 env.read_env()
 
@@ -22,21 +24,26 @@ class Database:
 
     def __init__(self):
         try:
-            self.conn = mariadb.connect(
+            self.conn = pymysql.connect(
                 user= env("user"),
                 password= env("password"),
                 host= env("host"),
                 port= int(env("port")),
-                database= env("database")
+                database= env("database"),
+                autocommit= True
             )
             self.cur = self.conn.cursor()
             
             self.cur.execute("CREATE TABLE IF NOT EXISTS link (id INT NOT NULL AUTO_INCREMENT, url VARCHAR(255), language VARCHAR(255) NOT NULL, title VARCHAR(255), PRIMARY KEY (id), UNIQUE (url))")
-            self.cur.execute("CREATE TABLE IF NOT EXISTS word (id INT NOT NULL AUTO_INCREMENT, word VARCHAR(255) NOT NULL, PRIMARY KEY (id), UNIQUE (word))")
+            self.cur.execute("CREATE TABLE IF NOT EXISTS word (id INT NOT NULL AUTO_INCREMENT, word VARCHAR(255) NOT NULL, PRIMARY KEY (id), UNIQUE (word), FULLTEXT (word) WITH PARSER ngram)")
             self.cur.execute("CREATE TABLE IF NOT EXISTS wordrelation (word_id INT NOT NULL, link_id INT NOT NULL, weight INT, PRIMARY KEY (word_id, link_id), FOREIGN KEY (word_id) REFERENCES word(id), FOREIGN KEY (link_id) REFERENCES link(id))")
-        except mariadb.Error as e:
+        except pymysql.OperationalError as e:
             print(f"Error connecting to MariaDB Platform: {e}")
             sys.exit(1)
+        except Exception as e:
+            print(f"Other error connecting to MariaDB Platform: {e}")
+            sys.exit(1)
+
         
     def __del__(self):
         self.conn.close()
@@ -44,7 +51,7 @@ class Database:
     def get_from_query(self, query):
         try:
             self.cur.execute(query)
-        except mariadb.Error as e:
+        except pymysql.Error as e:
             print(f"Error executing query: {e}")
         return self.cur.fetchall()
 
@@ -70,8 +77,7 @@ class Database:
 
         try:
             self.cur.execute(mySql_insert_query, value)
-            self.conn.commit()
-        except mariadb.Error as e:
+        except pymysql.Error as e:
                 print(f"Error: {e}")
 
         if(table == self.Table.word.value):
@@ -104,9 +110,10 @@ class Database:
             mySql_insert_query = """INSERT INTO wordrelation (word_id, link_id, weight) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE word_id = %s"""
 
         try:
-            self.cur.executemany(mySql_insert_query, values_with_duplicate_protection)
-            self.conn.commit()
-        except mariadb.Error as e:
+            #self.cur.executemany(mySql_insert_query, values_with_duplicate_protection)
+            for value in values_with_duplicate_protection:
+                self.cur.execute(mySql_insert_query, value)
+        except pymysql.Error as e:
                 print(f"Error: {e}")
         
         if(table == self.Table.word.value):
@@ -134,7 +141,7 @@ class Database:
         '''
         try:
             self.cur.execute("SELECT * FROM word")
-        except mariadb.Error as e:
+        except pymysql.Error as e:
             print(f"Error: {e}")
             return False
         return self.cur.fetchall()

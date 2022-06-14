@@ -8,3 +8,4 @@ pycld2
 pyicu
 spacy
 regex
+pymysql
