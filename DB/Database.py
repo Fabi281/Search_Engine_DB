@@ -7,6 +7,7 @@ from regex import R
 env = Env()
 env.read_env()
 
+
 class Database:
     '''
     On Initialization: Establishes a Connection to a MariaDB Database and creates the required Tables if they do not exist.
@@ -20,22 +21,23 @@ class Database:
     class Table(Enum):
         word = "word"
         link = "link"
-        wordrelation = "wordrelation" 
+        wordrelation = "wordrelation"
 
     def __init__(self):
         try:
             self.conn = pymysql.connect(
-                user= env("user"),
-                password= env("password"),
-                host= env("host"),
-                port= int(env("port")),
-                database= env("database"),
-                autocommit= True
+                user=env("user"),
+                password=env("password"),
+                host=env("host"),
+                port=int(env("port")),
+                database=env("database"),
+                autocommit=True
             )
             self.cur = self.conn.cursor()
-            
-            self.cur.execute("CREATE TABLE IF NOT EXISTS link (id INT NOT NULL AUTO_INCREMENT, url VARCHAR(255), language VARCHAR(255) NOT NULL, title VARCHAR(255), PRIMARY KEY (id), UNIQUE (url))")
-            self.cur.execute("CREATE TABLE IF NOT EXISTS word (id INT NOT NULL AUTO_INCREMENT, word VARCHAR(255) NOT NULL, PRIMARY KEY (id), UNIQUE (word), FULLTEXT (word) WITH PARSER ngram)")
+            self.cur.execute(
+                "CREATE TABLE IF NOT EXISTS link (id INT NOT NULL AUTO_INCREMENT, url VARCHAR(255), language VARCHAR(255) NOT NULL, title VARCHAR(255), PRIMARY KEY (id), UNIQUE (url))")
+            self.cur.execute(
+                "CREATE TABLE IF NOT EXISTS word (id INT NOT NULL AUTO_INCREMENT, word VARCHAR(255) NOT NULL, PRIMARY KEY (id), UNIQUE (word), FULLTEXT (word) WITH PARSER ngram)")
             self.cur.execute("CREATE TABLE IF NOT EXISTS wordrelation (word_id INT NOT NULL, link_id INT NOT NULL, weight INT, PRIMARY KEY (word_id, link_id), FOREIGN KEY (word_id) REFERENCES word(id), FOREIGN KEY (link_id) REFERENCES link(id))")
         except pymysql.OperationalError as e:
             print(f"Error connecting to MariaDB Platform: {e}")
@@ -44,10 +46,9 @@ class Database:
             print(f"Other error connecting to MariaDB Platform: {e}")
             sys.exit(1)
 
-        
     def __del__(self):
         self.conn.close()
-    
+
     def get_from_query(self, query):
         try:
             self.cur.execute(query)
@@ -56,7 +57,6 @@ class Database:
         return self.cur.fetchall()
 
     def insert_single_into_single_table(self, table, value):
-
         '''Please provide a string of tablename + columnname the value should be added at. Values can also be a list of values with 
         the same pattern.
         Example: insert_single_into_single_table(Database.Table.word.value, ("test",)) => <word>
@@ -78,19 +78,21 @@ class Database:
         try:
             self.cur.execute(mySql_insert_query, value)
         except pymysql.Error as e:
-                print(f"Error: {e}")
+            print(f"Error: {e}")
 
         if(table == self.Table.word.value):
-            id = self.get_from_query(f'SELECT id FROM word WHERE word = "{self.conn.escape_string(value[0])}"')
+            id = self.get_from_query(
+                f'SELECT id FROM word WHERE word = "{self.conn.escape_string(value[0])}"')
         elif(table == self.Table.link.value):
-            id = self.get_from_query(f'SELECT id FROM link WHERE link.url = "{self.conn.escape_string(value[0])}" AND link.language = "{self.conn.escape_string(value[1])}"')
+            id = self.get_from_query(
+                f'SELECT id FROM link WHERE link.url = "{self.conn.escape_string(value[0])}" AND link.language = "{self.conn.escape_string(value[1])}"')
         elif(table == self.Table.wordrelation.value):
-            id = self.get_from_query(f'SELECT word_id, link_id FROM wordrelation WHERE wordrelation.word_id = {value[0]} AND wordrelation.link_id = {value[1]} AND wordrelation.weight = {value[2]}')
+            id = self.get_from_query(
+                f'SELECT word_id, link_id FROM wordrelation WHERE wordrelation.word_id = {value[0]} AND wordrelation.link_id = {value[1]} AND wordrelation.weight = {value[2]}')
 
         return id
-    
-    def insert_multiple_into_single_table(self, table, values):
 
+    def insert_multiple_into_single_table(self, table, values):
         '''Please provide a string of tablename + columnname the value should be added at. Values can also be a list of values with 
         the same pattern.
         Example: insert_multiple_into_single_table(Database.Table.word.value, [("wordTuple1",), ("wordTuple2",)]) => <word>
@@ -99,46 +101,106 @@ class Database:
         '''
 
         id = None
-        #Append first value for update query so it can be used in the loop and duplicates are ignored
-        values_with_duplicate_protection = [value + (value[0],) for value in values]
 
         if(table == self.Table.word.value):
-            mySql_insert_query = """INSERT INTO word (word) VALUES (%s) ON DUPLICATE KEY UPDATE word = %s"""
+            mySql_insert_query = """INSERT IGNORE INTO word (word) VALUES (%s) """
         elif(table == self.Table.link.value):
-            mySql_insert_query = """INSERT INTO link (url, language, title) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE url = %s"""
+            mySql_insert_query = """INSERT IGNORE INTO link (url, language, title) VALUES (%s, %s, %s)"""
         elif(table == self.Table.wordrelation.value):
-            mySql_insert_query = """INSERT INTO wordrelation (word_id, link_id, weight) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE word_id = %s"""
+            mySql_insert_query = """INSERT IGNORE INTO wordrelation (word_id, link_id, weight) VALUES (%s, %s, %s)"""
 
         try:
-            #self.cur.executemany(mySql_insert_query, values_with_duplicate_protection)
-            for value in values_with_duplicate_protection:
-                self.cur.execute(mySql_insert_query, value)
+            self.cur.executemany(mySql_insert_query, values)
         except pymysql.Error as e:
-                print(f"Error: {e}")
-        
+            print(f"Error: {e}")
+
         if(table == self.Table.word.value):
             valuelist = ', '.join([
                 f'"{self.conn.escape_string(w[0])}"' for w in values])
 
-            id = self.get_from_query(f"SELECT id FROM word WHERE word.word IN ({valuelist}) ORDER BY FIELD(word.word,{valuelist})")
+            id = self.get_from_query(
+                f"SELECT id FROM word WHERE word.word IN ({valuelist}) ORDER BY FIELD(word.word,{valuelist})")
         elif(table == self.Table.link.value):
-            valuelist_url = ', '.join([f'"{self.conn.escape_string(w[0])}"' for w in values])
-            valuelist_language = ', '.join([f'"{self.conn.escape_string(w[1])}"' for w in values])
+            valuelist_url = ', '.join(
+                [f'"{self.conn.escape_string(w[0])}"' for w in values])
+            valuelist_language = ', '.join(
+                [f'"{self.conn.escape_string(w[1])}"' for w in values])
 
-            id = self.get_from_query(f"SELECT id FROM link WHERE link.url IN ({valuelist_url}) AND link.language IN ({valuelist_language}) ORDER BY FIELD(link.url,{valuelist_url})")
+            id = self.get_from_query(
+                f"SELECT id FROM link WHERE link.url IN ({valuelist_url}) AND link.language IN ({valuelist_language}) ORDER BY FIELD(link.url,{valuelist_url})")
         elif(table == self.Table.wordrelation.value):
             valuelist_word_id = ', '.join([f'"{w[0]}"' for w in values])
             valuelist_link_id = ', '.join([f'"{w[1]}"' for w in values])
             valuelist_weight = ', '.join([f'"{w[2]}"' for w in values])
 
-            id = self.get_from_query(f"SELECT word_id, link_id FROM wordrelation WHERE word_id IN ({valuelist_word_id}) AND wordrelation.link_id IN ({valuelist_link_id}) AND  wordrelation.weight IN ({valuelist_weight})")
-        
+            id = self.get_from_query(
+                f"SELECT word_id, link_id FROM wordrelation WHERE word_id IN ({valuelist_word_id}) AND wordrelation.link_id IN ({valuelist_link_id}) AND  wordrelation.weight IN ({valuelist_weight})")
+
         return id
 
     def get_all_languages(self):
         '''Returns a list of all languages'''
         return self.get_from_query("SELECT DISTINCT language FROM link")
-    
+
+    def search_word(self, word, language, page=1, limit=10):
+        '''Returns a list of all links that contain the word'''
+        results =  self.get_from_query(f"""
+        WITH selected_word_relations AS (
+        SELECT
+            wordrelation.link_id,
+            wordrelation.weight,
+            link.url,
+            link.title
+        FROM
+            wordrelation
+            JOIN word on word.id = wordrelation.word_id
+            JOIN link on link.id = wordrelation.link_id
+        WHERE
+            MATCH (word.word) AGAINST ('{self.conn.escape_string(word)}' in boolean mode)
+            AND link.language = '{self.conn.escape_string(language)}'
+        )
+        SELECT
+        selected_word_relations.weight / (
+            SELECT
+            SUM(weight)
+            from
+            wordrelation
+            WHERE
+            wordrelation.link_id = selected_word_relations.link_id
+        ) * LOG(
+            (
+            SELECT
+                COUNT(*)
+            from
+                wordrelation
+            ) / (
+            SELECT
+                COUNT(DISTINCT selected_word_relations.link_id)
+            from
+                selected_word_relations
+            )
+        ) as tfidf,
+        selected_word_relations.url,
+        selected_word_relations.title
+        from
+            selected_word_relations
+        order by
+            tfidf desc
+        limit {limit} offset {(page - 1) * limit};
+        """)
+        return [{'url': result[1], 'rank': result[0], 'title': result[2]} for result in results]
+
+    def predict_word(self, word):
+        results = self.get_from_query(f"""
+        SELECT
+            word
+        from
+            word
+        where
+            word like '{self.conn.escape_string(word)}%';
+        """)
+        return [result[0] for result in results]
+
     def test_my_connection(self):
         '''
         Test your connection to the MariaDB Database by executing a simple query (Fetch all words).
@@ -149,4 +211,3 @@ class Database:
             print(f"Error: {e}")
             return False
         return self.cur.fetchall()
-        
