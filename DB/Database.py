@@ -34,9 +34,10 @@ class Database:
             )
             self.cur = self.conn.cursor()
             
-            self.cur.execute("CREATE TABLE IF NOT EXISTS link (id INT NOT NULL AUTO_INCREMENT, url VARCHAR(255), language VARCHAR(255) NOT NULL, title VARCHAR(255), PRIMARY KEY (id), UNIQUE (url))")
+            self.cur.execute("CREATE TABLE IF NOT EXISTS link (id INT NOT NULL AUTO_INCREMENT, url TEXT, language VARCHAR(255) NOT NULL, title TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY (id), UNIQUE (url))")
             self.cur.execute("CREATE TABLE IF NOT EXISTS word (id INT NOT NULL AUTO_INCREMENT, word VARCHAR(255) NOT NULL, PRIMARY KEY (id), UNIQUE (word), FULLTEXT (word) WITH PARSER ngram)")
             self.cur.execute("CREATE TABLE IF NOT EXISTS wordrelation (word_id INT NOT NULL, link_id INT NOT NULL, weight INT, PRIMARY KEY (word_id, link_id), FOREIGN KEY (word_id) REFERENCES word(id), FOREIGN KEY (link_id) REFERENCES link(id))")
+            self.cur.execute("CREATE TABLE IF NOT EXISTS starturls (id INT NOT NULL AUTO_INCREMENT, url TEXT NOT NULL, PRIMARY KEY (id), UNIQUE (url))")
         except pymysql.OperationalError as e:
             print(f"Error connecting to MariaDB Platform: {e}")
             sys.exit(1)
@@ -47,7 +48,28 @@ class Database:
         
     def __del__(self):
         self.conn.close()
+
+    def delete_word_relation(self, link_id):
+        '''Deletes all word relations for a given link_id'''
+        self.cur.execute(f"DELETE FROM wordrelation WHERE link_id = {link_id}")
     
+    def update_timestamp(self, link_id):
+        '''Updates the timestamp of a link'''
+        self.cur.execute(f"UPDATE link SET timestamp = CURRENT_TIMESTAMP WHERE id = {link_id}")
+
+    def get_timestamp(self, url):
+        '''Returns the timestamp of a link'''
+        return self.get_from_query(f"SELECT timestamp FROM link WHERE url = '{url}'")[0][0]
+    
+    def get_all_start_urls(self):
+        '''Returns all start urls'''
+        results = self.get_from_query("SELECT url FROM starturls")
+        return [result[0] for result in results]
+    
+    def add_start_url(self, url):
+        '''Adds a start url to the starturls table.'''
+        self.cur.execute(f"INSERT INTO starturls (url) VALUES ('{url}')")
+
     def get_from_query(self, query):
         try:
             self.cur.execute(query)
@@ -149,4 +171,3 @@ class Database:
             print(f"Error: {e}")
             return False
         return self.cur.fetchall()
-        
