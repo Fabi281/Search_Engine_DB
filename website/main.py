@@ -1,2 +1,11 @@
+import sys
 import streamlit as st
-st.title('Test')
+import pandas as pd
+import validators
+sys.path.append("..")
+from DB.Database import Database
+
+st.title('Main')
+st.sidebar.title('Main')
+
+

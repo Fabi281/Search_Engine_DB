@@ -68,7 +68,12 @@ class Database:
     
     def add_start_url(self, url):
         '''Adds a start url to the starturls table.'''
-        self.cur.execute(f"INSERT INTO starturls (url) VALUES ('{url}')")
+        try:
+            self.cur.execute(f"INSERT INTO starturls (url) VALUES ('{url}')")
+            return True
+        except pymysql.Error as e:
+            print(f"Error executing query: {e}")
+        return False
 
     def get_from_query(self, query):
         try:
