@@ -23,5 +23,6 @@ if submitted:
     else:
         st.sidebar.error("URL is not valid")
 
-data = pd.DataFrame({'url': db.get_all_start_urls()})
-st.dataframe(data)
+with st.expander("Start URLs", expanded=True):
+    data = pd.DataFrame({'url': db.get_all_start_urls()})
+    st.dataframe(data)
