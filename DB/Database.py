@@ -22,6 +22,8 @@ class Database:
         word = "word"
         link = "link"
         wordrelation = "wordrelation"
+        starturls = "starturls"
+        alloweddomains = "alloweddomains"
 
     def __init__(self):
         try:
@@ -39,6 +41,7 @@ class Database:
             self.cur.execute("CREATE TABLE IF NOT EXISTS word (id INT NOT NULL AUTO_INCREMENT, word VARCHAR(255) NOT NULL, PRIMARY KEY (id), UNIQUE (word), FULLTEXT (word) WITH PARSER ngram)")
             self.cur.execute("CREATE TABLE IF NOT EXISTS wordrelation (word_id INT NOT NULL, link_id INT NOT NULL, weight INT, PRIMARY KEY (word_id, link_id), FOREIGN KEY (word_id) REFERENCES word(id), FOREIGN KEY (link_id) REFERENCES link(id))")
             self.cur.execute("CREATE TABLE IF NOT EXISTS starturls (id INT NOT NULL AUTO_INCREMENT, url VARCHAR(255) NOT NULL, PRIMARY KEY (id), UNIQUE (url))")
+            self.cur.execute("CREATE TABLE IF NOT EXISTS alloweddomains (id INT NOT NULL AUTO_INCREMENT, domain VARCHAR(255) NOT NULL, PRIMARY KEY (id), UNIQUE (domain))")
         except pymysql.OperationalError as e:
             print(f"Error connecting to Database Platform: {e}")
             sys.exit(1)
@@ -48,6 +51,10 @@ class Database:
 
     def __del__(self):
         self.conn.close()
+
+    def delete_domain(self, domain):
+        '''Deletes a domain from the alloweddomains table'''
+        self.cur.execute(f"DELETE FROM alloweddomains WHERE domain = '{domain}'")
 
     def delete_word_relation(self, link_id):
         '''Deletes all word relations for a given link_id'''
@@ -65,15 +72,6 @@ class Database:
         '''Returns all start urls'''
         results = self.get_from_query("SELECT url FROM starturls")
         return [result[0] for result in results]
-    
-    def add_start_url(self, url):
-        '''Adds a start url to the starturls table.'''
-        try:
-            self.cur.execute(f"INSERT INTO starturls (url) VALUES ('{url}')")
-            return True
-        except pymysql.Error as e:
-            print(f"Error executing query: {e}")
-        return False
 
     def get_from_query(self, query):
         try:
@@ -100,6 +98,10 @@ class Database:
             mySql_insert_query = """INSERT INTO link (url, language, title) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE url = %s"""
         elif(table == self.Table.wordrelation.value):
             mySql_insert_query = """INSERT wordrelation (word_id, link_id, weight) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE word_id = %s"""
+        elif(table == self.Table.starturls.value):
+            mySql_insert_query = """INSERT INTO starturls (url) VALUES (%s) ON DUPLICATE KEY UPDATE url = %s"""
+        elif(table == self.Table.alloweddomains.value):
+            mySql_insert_query = """INSERT INTO alloweddomains (domain) VALUES (%s) ON DUPLICATE KEY UPDATE domain = %s"""
 
         try:
             self.cur.execute(mySql_insert_query, value)
@@ -115,6 +117,12 @@ class Database:
         elif(table == self.Table.wordrelation.value):
             id = self.get_from_query(
                 f'SELECT word_id, link_id FROM wordrelation WHERE wordrelation.word_id = {value[0]} AND wordrelation.link_id = {value[1]} AND wordrelation.weight = {value[2]}')
+        elif(table == self.Table.starturls.value):
+            id = self.get_from_query(
+                f'SELECT id FROM starturls WHERE starturls.url = "{self.conn.escape_string(value[0])}"')
+        elif(table == self.Table.alloweddomains.value):
+            id = self.get_from_query(
+                f'SELECT id FROM alloweddomains WHERE alloweddomains.domain = "{self.conn.escape_string(value[0])}"')
 
         return id
 
@@ -134,6 +142,10 @@ class Database:
             mySql_insert_query = """INSERT IGNORE INTO link (url, language, title) VALUES (%s, %s, %s)"""
         elif(table == self.Table.wordrelation.value):
             mySql_insert_query = """INSERT IGNORE INTO wordrelation (word_id, link_id, weight) VALUES (%s, %s, %s)"""
+        elif(table == self.Table.starturls.value):
+            mySql_insert_query = """INSERT IGNORE INTO starturls (url) VALUES (%s)"""
+        elif(table == self.Table.alloweddomains.value):
+            mySql_insert_query = """INSERT IGNORE INTO alloweddomains (domain) VALUES (%s)"""
 
         try:
             self.cur.executemany(mySql_insert_query, values)
@@ -143,7 +155,6 @@ class Database:
         if(table == self.Table.word.value):
             valuelist = ', '.join([
                 f'"{self.conn.escape_string(w[0])}"' for w in values])
-
             id = self.get_from_query(
                 f"SELECT id FROM word WHERE word.word IN ({valuelist}) ORDER BY FIELD(word.word,{valuelist})")
         elif(table == self.Table.link.value):
@@ -161,6 +172,16 @@ class Database:
 
             id = self.get_from_query(
                 f"SELECT word_id, link_id FROM wordrelation WHERE word_id IN ({valuelist_word_id}) AND wordrelation.link_id IN ({valuelist_link_id}) AND  wordrelation.weight IN ({valuelist_weight})")
+        elif(table == self.Table.starturls.value):
+            valuelist = ', '.join([
+                f'"{self.conn.escape_string(w[0])}"' for w in values])
+            id = self.get_from_query(
+                f"SELECT id FROM starturls WHERE starturls.url IN ({valuelist}) ORDER BY FIELD(starturls.url,{valuelist})")
+        elif(table == self.Table.alloweddomains.value):
+            valuelist = ', '.join([
+                f'"{self.conn.escape_string(w[0])}"' for w in values])
+            id = self.get_from_query(
+                f"SELECT id FROM alloweddomains WHERE alloweddomains.domain IN ({valuelist}) ORDER BY FIELD(alloweddomains.domain,{valuelist})")
 
         return id
 
