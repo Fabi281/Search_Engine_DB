@@ -72,6 +72,11 @@ class Database:
         '''Returns all start urls'''
         results = self.get_from_query("SELECT url FROM starturls")
         return [result[0] for result in results]
+    
+    def get_all_allowed_domains(self):
+        '''Returns a list of all allowed domains'''
+        results = self.get_from_query("SELECT domain FROM alloweddomains")
+        return [result[0] for result in results]
 
     def get_from_query(self, query):
         try:
@@ -86,6 +91,8 @@ class Database:
         Example: insert_single_into_single_table(Database.Table.word.value, ("test",)) => <word>
         Example: insert_single_into_single_table(Database.Table.link.value, ("www.google.com", "German")) => <url>, <language>
         Example: insert_single_into_single_table(Database.Table.wordrelation.value, (1,1,1)) => <word_id>, <link_id>, <weight>
+        Example: insert_single_into_single_table(Database.Table.starturls.value, ("https://www.google.com",)) => <starturl>
+        Example: insert_single_into_single_table(Database.Table.alloweddomains.value, ("www.google.com",)) => <alloweddomain>
         '''
 
         id = None
