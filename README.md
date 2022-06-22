@@ -30,8 +30,6 @@ You can deploy this application with the following steps:
 | port   | 3306        |
 | database      | "Databasename"       |
 
-2. Run Docker Compose on the docker-compose.yaml in DB-folder, this creates the mysql-database with the right tables, constraints and so on and a phpmyadmin interface
-3. Run Docker Compose on the docker-compose-spider.yaml in this folder to run the scraper
-which fills the database
-4. Run Docker Compose on the website.yaml in the "website"-folder to run the frontend with admin
-and user interface
+1. Run Docker Compose on the docker-compose-db.yaml, this creates the mysql-database with the right tables, constraints and so on and a phpmyadmin interface
+2. Run Docker Compose on the docker-compose-spider.yaml to run the scraper which fills the database
+3. Run Docker Compose on the docker-compose-website.yaml to run the frontend with admin and user interface
