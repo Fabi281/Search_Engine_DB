@@ -24,11 +24,11 @@ You can deploy this application with the following steps:
 
 | Key      | Value |
 | ----------- | ----------- |
-| user      | "Username"       |
-| password   | "Password"        |
+| MYSQL_USER      | "Username"       |
+| MYSQL_PASSWORD   | "Password"        |
 | host      | "127.0.0.1"       |
 | port   | 3306        |
-| database      | "Databasename"       |
+| MYSQL_DATABASE      | "Databasename"       |
 
 1. Run Docker Compose on the docker-compose-db.yaml, this creates the mysql-database with the right tables, constraints and so on and a phpmyadmin interface
 2. Run Docker Compose on the docker-compose-spider.yaml to run the scraper which fills the database
