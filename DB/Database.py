@@ -36,13 +36,17 @@ class Database:
                 autocommit=True
             )
             self.cur = self.conn.cursor()
-            
+
             self.cur.execute("CREATE TABLE IF NOT EXISTS link (id INT NOT NULL AUTO_INCREMENT, url VARCHAR(255), language VARCHAR(255) NOT NULL, title TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY (id), UNIQUE (url))")
-            self.cur.execute("CREATE TABLE IF NOT EXISTS word (id INT NOT NULL AUTO_INCREMENT, word VARCHAR(255) NOT NULL, PRIMARY KEY (id), UNIQUE (word), FULLTEXT (word) WITH PARSER ngram)")
+            self.cur.execute(
+                "CREATE TABLE IF NOT EXISTS word (id INT NOT NULL AUTO_INCREMENT, word VARCHAR(255) NOT NULL, PRIMARY KEY (id), UNIQUE (word), FULLTEXT (word) WITH PARSER ngram)")
             self.cur.execute("CREATE TABLE IF NOT EXISTS wordrelation (word_id INT NOT NULL, link_id INT NOT NULL, weight INT, PRIMARY KEY (word_id, link_id), FOREIGN KEY (word_id) REFERENCES word(id), FOREIGN KEY (link_id) REFERENCES link(id))")
-            self.cur.execute("CREATE TABLE IF NOT EXISTS starturls (id INT NOT NULL AUTO_INCREMENT, url VARCHAR(255) NOT NULL, PRIMARY KEY (id), UNIQUE (url))")
-            self.cur.execute("CREATE TABLE IF NOT EXISTS alloweddomains (id INT NOT NULL AUTO_INCREMENT, domain VARCHAR(255) NOT NULL, PRIMARY KEY (id), UNIQUE (domain))")
-            self.cur.execute("CREATE TABLE IF NOT EXISTS backlinks (link_id_from INT NOT NULL, url_to VARCHAR(255) NOT NULL, PRIMARY KEY (link_id_from, url_to), FOREIGN KEY (link_id_from) REFERENCES link(id))")
+            self.cur.execute(
+                "CREATE TABLE IF NOT EXISTS starturls (id INT NOT NULL AUTO_INCREMENT, url VARCHAR(255) NOT NULL, PRIMARY KEY (id), UNIQUE (url))")
+            self.cur.execute(
+                "CREATE TABLE IF NOT EXISTS alloweddomains (id INT NOT NULL AUTO_INCREMENT, domain VARCHAR(255) NOT NULL, PRIMARY KEY (id), UNIQUE (domain))")
+            self.cur.execute(
+                "CREATE TABLE IF NOT EXISTS backlinks (link_id_from INT NOT NULL, url_to VARCHAR(255) NOT NULL, PRIMARY KEY (link_id_from, url_to), FOREIGN KEY (link_id_from) REFERENCES link(id))")
         except pymysql.OperationalError as e:
             print(f"Error connecting to Database Platform: {e}")
             sys.exit(1)
@@ -51,24 +55,25 @@ class Database:
             sys.exit(1)
 
     def __del__(self):
-        self.conn.close()     
+        self.conn.close()
 
     def get_timestamp(self, url):
         '''Returns the timestamp of a link'''
-        result = self.get_from_query(f"SELECT timestamp FROM link WHERE url = '{url}'")
+        result = self.get_from_query(
+            f"SELECT timestamp FROM link WHERE url = '{url}'")
         if len(result):
             return result[0][0]
         return None
-    
+
     def get_all_start_urls(self):
         '''Returns all start urls and ids'''
         results = self.get_from_query("SELECT id, url FROM starturls")
         return [{"id": result[0], "url": result[1]} for result in results]
-    
+
     def get_all_allowed_domains(self):
         '''Returns a list of all allowed domains and ids'''
         results = self.get_from_query("SELECT id, domain FROM alloweddomains")
-        return [{"id": result[0], "domain": result[1]}  for result in results]
+        return [{"id": result[0], "domain": result[1]} for result in results]
 
     def get_all_languages(self):
         '''Returns a list of all languages and ids'''
@@ -209,7 +214,8 @@ class Database:
 
     def update_timestamp(self, link_id):
         '''Updates the timestamp of a link'''
-        self.cur.execute(f"UPDATE link SET timestamp = CURRENT_TIMESTAMP WHERE id = {link_id}")
+        self.cur.execute(
+            f"UPDATE link SET timestamp = CURRENT_TIMESTAMP WHERE id = {link_id}")
 
     def delete_from_table(self, table, id):
         '''
@@ -218,56 +224,78 @@ class Database:
                 delete_from_table(Database.Table.wordrelation.value, [1,2]) => deletes the wordrelation with link_id 1 and word_id 2
         '''
         if(table == Database.Table.wordrelation.value):
-            self.cur.execute(f"DELETE FROM wordrelation WHERE link_id = {id[0]} AND word_id = {id[1]}")
+            self.cur.execute(
+                f"DELETE FROM wordrelation WHERE link_id = {id[0]} AND word_id = {id[1]}")
         elif(table == Database.Table.backlinks.value):
-            self.cur.execute(f'DELETE FROM backlinks WHERE link_id_from = {id[0]} AND url_to = "{self.conn.escape_string(id[1])}"')
+            self.cur.execute(
+                f'DELETE FROM backlinks WHERE link_id_from = {id[0]} AND url_to = "{self.conn.escape_string(id[1])}"')
         else:
-            self.cur.execute(f"DELETE FROM {table} WHERE id = {id}")   
+            self.cur.execute(f"DELETE FROM {table} WHERE id = {id}")
 
-    def search_db_with_query(self, query, language, page=1, limit=10):
+    def search_db_with_query(self, query, language, weight_tfidf=0.01, page=1, limit=10):
         '''Returns a list of all links that contain the search query'''
-        results =  self.get_from_query(f"""
+        results = self.get_from_query(f"""
         WITH selected_word_relations AS (
-        SELECT
-            wordrelation.link_id,
-            wordrelation.weight,
-            link.url,
-            link.title
-        FROM
-            wordrelation
-            JOIN word on word.id = wordrelation.word_id
-            JOIN link on link.id = wordrelation.link_id
-        WHERE
-            MATCH (word.word) AGAINST ('{self.conn.escape_string(query)}' in boolean mode)
-            AND link.language = '{self.conn.escape_string(language)}'
-        )
-        SELECT
-        selected_word_relations.weight / (
             SELECT
-            SUM(weight)
-            from
-            wordrelation
-            WHERE
-            wordrelation.link_id = selected_word_relations.link_id
-        ) * LOG(
-            (
-            SELECT
-                COUNT(*)
-            from
+                wordrelation.link_id,
+                wordrelation.weight,
+                link.url,
+                link.title
+            FROM
                 wordrelation
-            ) / (
-            SELECT
-                COUNT(DISTINCT selected_word_relations.link_id)
-            from
-                selected_word_relations
+                JOIN word on word.id = wordrelation.word_id
+                JOIN link on link.id = wordrelation.link_id
+            WHERE
+                MATCH (word.word) AGAINST ('{self.conn.escape_string(query)}' in boolean mode)
+                AND link.language = '{self.conn.escape_string(language)}'
             )
-        ) as tfidf,
-        selected_word_relations.url,
-        selected_word_relations.title
-        from
+            SELECT
+            selected_word_relations.weight / (
+                SELECT
+                SUM(weight)
+                from
+                wordrelation
+                WHERE
+                wordrelation.link_id = selected_word_relations.link_id
+            ) * LOG(
+                (
+                SELECT
+                    COUNT(*)
+                from
+                    wordrelation
+                ) / (
+                SELECT
+                    COUNT(DISTINCT selected_word_relations.link_id)
+                from
+                    selected_word_relations
+                )
+            ) * {weight_tfidf} + {1-weight_tfidf} * LOG((
+                SELECT
+                COUNT(DISTINCT selected_word_relations.link_id)
+                from
+                backlinks
+                join selected_word_relations on selected_word_relations.url = backlinks.url_to
+                WHERE
+                backlinks.url_to = selected_word_relations.url
+            )) / LOG((
+                SELECT
+                MAX(count)
+                FROM
+                (
+                    SELECT
+                    COUNT(*) as count
+                    from
+                    backlinks
+                    GROUP BY
+                    backlinks.url_to
+                ) AS backlinks_count
+            )) as ranking,
+            selected_word_relations.url,
+            selected_word_relations.title
+            from
             selected_word_relations
-        order by
-            tfidf desc
+            order by
+            ranking desc
         limit {limit} offset {(page - 1) * limit};
         """)
         return [{'url': result[1], 'rank': result[0], 'title': result[2]} for result in results]
