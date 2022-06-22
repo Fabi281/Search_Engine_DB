@@ -23,6 +23,7 @@ class Database:
         wordrelation = "wordrelation"
         starturls = "starturls"
         alloweddomains = "alloweddomains"
+        backlinks = "backlinks"
 
     def __init__(self):
         try:
@@ -41,6 +42,7 @@ class Database:
             self.cur.execute("CREATE TABLE IF NOT EXISTS wordrelation (word_id INT NOT NULL, link_id INT NOT NULL, weight INT, PRIMARY KEY (word_id, link_id), FOREIGN KEY (word_id) REFERENCES word(id), FOREIGN KEY (link_id) REFERENCES link(id))")
             self.cur.execute("CREATE TABLE IF NOT EXISTS starturls (id INT NOT NULL AUTO_INCREMENT, url VARCHAR(255) NOT NULL, PRIMARY KEY (id), UNIQUE (url))")
             self.cur.execute("CREATE TABLE IF NOT EXISTS alloweddomains (id INT NOT NULL AUTO_INCREMENT, domain VARCHAR(255) NOT NULL, PRIMARY KEY (id), UNIQUE (domain))")
+            self.cur.execute("CREATE TABLE IF NOT EXISTS backlinks (link_id_from INT NOT NULL, link_id_to INT NOT NULL, PRIMARY KEY (link_id_from, link_id_to), FOREIGN KEY (link_id_from) REFERENCES link(id), FOREIGN KEY (link_id_to) REFERENCES link(id))")
         except pymysql.OperationalError as e:
             print(f"Error connecting to Database Platform: {e}")
             sys.exit(1)
@@ -88,6 +90,7 @@ class Database:
         Example: insert_single_into_single_table(Database.Table.wordrelation.value, (1,1,1)) => <word_id>, <link_id>, <weight>
         Example: insert_single_into_single_table(Database.Table.starturls.value, ("https://www.google.com",)) => <starturl>
         Example: insert_single_into_single_table(Database.Table.alloweddomains.value, ("www.google.com",)) => <alloweddomain>
+        Example: insert_single_into_single_table(Database.Table.backlinks.value, (1,2)) => <link_id_from>, <link_id_to>
         '''
 
         id = None
@@ -104,6 +107,8 @@ class Database:
             mySql_insert_query = """INSERT INTO starturls (url) VALUES (%s) ON DUPLICATE KEY UPDATE url = %s"""
         elif(table == self.Table.alloweddomains.value):
             mySql_insert_query = """INSERT INTO alloweddomains (domain) VALUES (%s) ON DUPLICATE KEY UPDATE domain = %s"""
+        elif(table == self.Table.backlinks.value):
+            mySql_insert_query = """INSERT INTO backlinks (link_id_from, link_id_to) VALUES (%s, %s) ON DUPLICATE KEY UPDATE link_id_from = %s"""
 
         try:
             self.cur.execute(mySql_insert_query, value)
@@ -125,6 +130,9 @@ class Database:
         elif(table == self.Table.alloweddomains.value):
             id = self.get_from_query(
                 f'SELECT id FROM alloweddomains WHERE alloweddomains.domain = "{self.conn.escape_string(value[0])}"')
+        elif(table == self.Table.backlinks.value):
+            id = self.get_from_query(
+                f'SELECT link_id_from, link_id_to FROM backlinks WHERE backlinks.link_id_from = {value[0]} AND backlinks.link_id_to = {value[1]}')
 
         return id
 
@@ -136,6 +144,7 @@ class Database:
                  insert_multiple_into_single_table(Database.Table.wordrelation.value, [(1, 1, 1), (2, 2, 2)]) => (<word_id>, <link_id>, <weight>)
                  insert_multiple_into_single_table(Database.Table.starturls.value, [("https://www.stackoverflow.com",), ("https://www.youtube.com",)]) => <starturl>   
                  insert_multiple_into_single_table(Database.Table.alloweddomains.value, [("www.stackoverflow.com",), ("www.youtube.com",)]) => <alloweddoamain>   
+                 insert_multiple_into_single_table(Database.Table.backlink.value, [(1, 1), (2, 2)]) => (<link_id_from>, <link_id_to>)
         '''
 
         id = None
@@ -150,6 +159,8 @@ class Database:
             mySql_insert_query = """INSERT IGNORE INTO starturls (url) VALUES (%s)"""
         elif(table == self.Table.alloweddomains.value):
             mySql_insert_query = """INSERT IGNORE INTO alloweddomains (domain) VALUES (%s)"""
+        elif(table == self.Table.backlinks.value):
+            mySql_insert_query = """INSERT IGNORE INTO backlinks (link_id_from, link_id_to) VALUES (%s, %s)"""
 
         try:
             self.cur.executemany(mySql_insert_query, values)
@@ -186,6 +197,12 @@ class Database:
                 f'"{self.conn.escape_string(w[0])}"' for w in values])
             id = self.get_from_query(
                 f"SELECT id FROM alloweddomains WHERE alloweddomains.domain IN ({valuelist}) ORDER BY FIELD(alloweddomains.domain,{valuelist})")
+        elif(table == self.Table.backlinks.value):
+            valuelist_link_id_from = ', '.join([f'"{w[0]}"' for w in values])
+            valuelist_link_id_to = ', '.join([f'"{w[1]}"' for w in values])
+
+            id = self.get_from_query(
+                f"SELECT link_id_from, link_id_to FROM backlinks WHERE backlinks.link_id_from IN ({valuelist_link_id_from}) AND backlinks.link_id_to IN ({valuelist_link_id_to})")
 
         return id
 
@@ -201,6 +218,8 @@ class Database:
         '''
         if(table == Database.Table.wordrelation.value):
             self.cur.execute(f"DELETE FROM wordrelation WHERE link_id = {id[0]} AND word_id = {id[1]}")
+        elif(table == Database.Table.backlinks.value):
+            self.cur.execute(f"DELETE FROM backlinks WHERE link_id_from = {id[0]} AND link_id_to = {id[1]}")
         else:
             self.cur.execute(f"DELETE FROM {table} WHERE id = {id}")   
 
