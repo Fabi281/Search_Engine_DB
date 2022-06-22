@@ -7,10 +7,11 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: "root"
     restart: on-failure
-    #volumes:
-      #- mariadb_db_search_enginge:/var/lib/mysql
+    volumes:
+      - mariadb_db_search_enginge:/var/lib/mysql
     ports:
       - "3306:3306"
+    command: "--ngram_token_size=4"
 
   phpmyadmin:
     image: phpmyadmin
@@ -24,5 +25,5 @@ services:
     depends_on:
       - mariadb
 
-# volumes:
-#   mariadb_db_search_enginge:
+volumes:
+  mariadb_db_search_enginge:

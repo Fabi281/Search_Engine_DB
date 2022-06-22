@@ -46,7 +46,7 @@ class Database:
             self.cur.execute(
                 "CREATE TABLE IF NOT EXISTS alloweddomains (id INT NOT NULL AUTO_INCREMENT, domain VARCHAR(255) NOT NULL, PRIMARY KEY (id), UNIQUE (domain))")
             self.cur.execute(
-                "CREATE TABLE IF NOT EXISTS backlinks (link_id_from INT NOT NULL, url_to VARCHAR(255) NOT NULL, PRIMARY KEY (link_id_from, url_to), FOREIGN KEY (link_id_from) REFERENCES link(id))")
+                "CREATE TABLE IF NOT EXISTS backlinks (link_id_from INT NOT NULL, url_to VARCHAR(255) NOT NULL, PRIMARY KEY (link_id_from, url_to), FOREIGN KEY (link_id_from) REFERENCES link(id), INDEX (url_to))")
         except pymysql.OperationalError as e:
             print(f"Error connecting to Database Platform: {e}")
             sys.exit(1)
@@ -235,7 +235,18 @@ class Database:
     def search_db_with_query(self, query, language, weight_tfidf=0.01, page=1, limit=10):
         '''Returns a list of all links that contain the search query'''
         results = self.get_from_query(f"""
-        WITH selected_word_relations AS (
+            WITH max_backlinks AS (
+                SELECT MAX(count.count)
+                from (
+                    SELECT
+                        COUNT(*) as count
+                    from
+                        backlinks
+                    GROUP BY
+                        backlinks.url_to
+                ) as count
+            ),
+            selected_word_relations AS (
             SELECT
                 wordrelation.link_id,
                 wordrelation.weight,
@@ -247,7 +258,16 @@ class Database:
                 JOIN link on link.id = wordrelation.link_id
             WHERE
                 MATCH (word.word) AGAINST ('{self.conn.escape_string(query)}' in boolean mode)
-                AND link.language = '{self.conn.escape_string(language)}'
+            ),
+            backlinks AS (
+                SELECT
+                COUNT(DISTINCT backlinks.link_id_from) AS count,
+                selected_word_relations.link_id
+                from
+                backlinks
+                join selected_word_relations on selected_word_relations.url = backlinks.url_to
+                GROUP BY
+                backlinks.url_to
             )
             SELECT
             selected_word_relations.weight / (
@@ -271,24 +291,13 @@ class Database:
                 )
             ) * {weight_tfidf} + {1-weight_tfidf} * LOG((
                 SELECT
-                COUNT(DISTINCT selected_word_relations.link_id)
-                from
-                backlinks
-                join selected_word_relations on selected_word_relations.url = backlinks.url_to
-                WHERE
-                backlinks.url_to = selected_word_relations.url
-            )) / LOG((
-                SELECT
-                MAX(count)
-                FROM
-                (
-                    SELECT
-                    COUNT(*) as count
-                    from
+                   count
+                FROM 
                     backlinks
-                    GROUP BY
-                    backlinks.url_to
-                ) AS backlinks_count
+                WHERE 
+                    backlinks.link_id = selected_word_relations.link_id 
+            )) / LOG((
+                SELECT * from max_backlinks
             )) as ranking,
             selected_word_relations.url,
             selected_word_relations.title
