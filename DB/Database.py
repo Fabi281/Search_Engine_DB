@@ -232,7 +232,7 @@ class Database:
         else:
             self.cur.execute(f"DELETE FROM {table} WHERE id = {id}")
 
-    def search_db_with_query(self, query, language, weight_tfidf=0.01, page=1, limit=10):
+    def search_db_with_query(self, query, language, weight_tfidf=0.6, weight_match=0.2, weight_backlink=0.2, page=1, limit=10):
         '''Returns a list of all links that contain the search query'''
         results = self.get_from_query(f"""
             WITH max_backlinks AS (
@@ -258,6 +258,7 @@ class Database:
                 JOIN link on link.id = wordrelation.link_id
             WHERE
                 MATCH (word.word) AGAINST ('{self.conn.escape_string(query)}' in boolean mode)
+                AND link.language = '{self.conn.escape_string(language)}'
             ),
             backlinks AS (
                 SELECT

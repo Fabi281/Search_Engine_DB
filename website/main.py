@@ -21,6 +21,9 @@ if 'page' not in st.session_state:
 with st.form(key="search", clear_on_submit=False):
     language = st.radio("Please select a language", ("german", "english"))
     search_string = st.text_input("Search", key='query_input')
+    weight = 0.8
+    with st.expander("Advanced options"):
+        weight = st.slider("Weight of TF-IDF", 0.0, 1.0, weight, key='weight_input')
     submitted = st.form_submit_button("Submit")
 
 if submitted and not search_string == "":
@@ -32,6 +35,7 @@ if submitted and not search_string == "":
 def update_dataframe():
     df = pd.DataFrame(db.search_db_with_query(query=st.session_state['query'],
                                               language=st.session_state['language'],
+                                              weight_tfidf=weight,
                                               page=st.session_state['page']))
     return df
 
