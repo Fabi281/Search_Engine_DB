@@ -49,22 +49,7 @@ class Database:
             sys.exit(1)
 
     def __del__(self):
-        self.conn.close()
-
-    def delete_from_table(self, table, id):
-        '''
-        Deletes a row from a table.
-        Example: delete_from_table(Database.Table.word.value, 1) => deletes the word with id 1
-                delete_from_table(Database.Table.wordrelation.value, [1,2]) => deletes the wordrelation with link_id 1 and word_id 2
-        '''
-        if(table == Database.Table.wordrelation.value):
-            self.cur.execute(f"DELETE FROM wordrelation WHERE link_id = {id[0]} AND word_id = {id[1]}")
-        else:
-            self.cur.execute(f"DELETE FROM {table} WHERE id = {id}")        
-    
-    def update_timestamp(self, link_id):
-        '''Updates the timestamp of a link'''
-        self.cur.execute(f"UPDATE link SET timestamp = CURRENT_TIMESTAMP WHERE id = {link_id}")
+        self.conn.close()     
 
     def get_timestamp(self, url):
         '''Returns the timestamp of a link'''
@@ -203,6 +188,21 @@ class Database:
                 f"SELECT id FROM alloweddomains WHERE alloweddomains.domain IN ({valuelist}) ORDER BY FIELD(alloweddomains.domain,{valuelist})")
 
         return id
+
+    def update_timestamp(self, link_id):
+        '''Updates the timestamp of a link'''
+        self.cur.execute(f"UPDATE link SET timestamp = CURRENT_TIMESTAMP WHERE id = {link_id}")
+
+    def delete_from_table(self, table, id):
+        '''
+        Deletes a row from a table.
+        Example: delete_from_table(Database.Table.word.value, 1) => deletes the word with id 1
+                delete_from_table(Database.Table.wordrelation.value, [1,2]) => deletes the wordrelation with link_id 1 and word_id 2
+        '''
+        if(table == Database.Table.wordrelation.value):
+            self.cur.execute(f"DELETE FROM wordrelation WHERE link_id = {id[0]} AND word_id = {id[1]}")
+        else:
+            self.cur.execute(f"DELETE FROM {table} WHERE id = {id}")   
 
     def search_db_with_query(self, query, language, page=1, limit=10):
         '''Returns a list of all links that contain the search query'''
