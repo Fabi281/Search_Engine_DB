@@ -29,11 +29,14 @@ class MySpider(scrapy.Spider):
         r'text/html',
     ]
 
-    def __init__(self, name=env("SPIDER_NAME"), **kwargs):
+    def __init__(self, allowed_domains, start_urls, db_instance, name=env("SPIDER_NAME"), **kwargs):
         super().__init__(name, **kwargs)
-        self.db = Database()
-        self.start_urls = env("START_URLS").split(';')
-        self.allowed_domains = env("ALLOWED_DOMAINS").split(';')
+        self.db = db_instance
+        self.start_urls = start_urls
+        self.allowed_domains = allowed_domains
+
+    def get_db(self):
+        return self.db
 
     def parse(self, response):
         # # save url to pages.txt
@@ -107,19 +110,43 @@ class MySpider(scrapy.Spider):
 if __name__ == "__main__":
     process = CrawlerProcess({
         'USER_AGENT': 'Mozilla/5.0 (compatible; StudentBot; https://www.heidenheim.dhbw.de/)',
-        'LOG_LEVEL': 'WARNING',
+        'LOG_LEVEL': 'DEBUG',
         'ROBOTSTXT_OBEY': True,
         'ROBOTSTXT_USER_AGENT': '*',
         'SPIDER_MIDDLEWARES': {
             'scraper.MimeFilterMiddleware.MimeFilterMiddleware': 999,
+            'scraper.AlreadyIndexedMiddleware.AlreadyIndexedMiddleware': 998,
         },
         'CONCURRENT_REQUESTS': 32,
         'CONCURRENT_REQUESTS_PER_DOMAIN': 32,
 
     })
 
+    db = Database()
+    # setup start urls
+    start_urls = db.get_all_start_urls()
+
+    if len(start_urls) == 0:
+        start_urls_env = env("START_URLS")
+        start_urls = start_urls_env.split(";")
+        db.insert_multiple_into_single_table(Database.Table.starturls.value, [(url,) for url in start_urls])
+
+
+    start_urls = db.get_all_start_urls()
+
+    # setup allowed domains
+    allowed_domains = db.get_all_allowed_domains()
+
+    if len(allowed_domains) == 0:
+        allowed_domains_env = env("ALLOWED_DOMAINS")
+        allowed_domains = allowed_domains_env.split(";")
+        db.insert_multiple_into_single_table(Database.Table.alloweddomains.value, [(domain,) for domain in allowed_domains])
+
+
+    allowed_domains = db.get_all_allowed_domains()
+
     crawler = process.create_crawler(MySpider)
-    process.crawl(crawler)
+    process.crawl(crawler, allowed_domains, start_urls, db)
     process.start()
 
     stats_obj = crawler.stats

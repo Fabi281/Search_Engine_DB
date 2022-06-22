@@ -65,7 +65,10 @@ class Database:
 
     def get_timestamp(self, url):
         '''Returns the timestamp of a link'''
-        return self.get_from_query(f"SELECT timestamp FROM link WHERE url = '{url}'")[0][0]
+        result = self.get_from_query(f"SELECT timestamp FROM link WHERE url = '{url}'")
+        if len(result):
+            return result[0][0]
+        return None
     
     def get_all_start_urls(self):
         '''Returns all start urls'''
