@@ -11,18 +11,45 @@ st.title('Admin')
 
 db = Database()
 
-with st.form(key="entry", clear_on_submit=True):
+with st.form(key="start_url", clear_on_submit=True):
     url = st.text_input("URL")
-    submitted = st.form_submit_button("Submit")
-if submitted:
+    addUrl = st.form_submit_button("Insert")
+if addUrl:
     if validators.url(url):
-        if db.add_start_url(url):
+        if db.insert_single_into_single_table(Database.Table.starturls.value, (url,)):
             st.sidebar.success("Added entry into Database")
         else:
             st.sidebar.error("An Error occured. Please try again later")
     else:
         st.sidebar.error("URL is not valid")
 
-with st.expander("Start URLs", expanded=True):
-    data = pd.DataFrame({'url': db.get_all_start_urls()})
-    st.dataframe(data)
+with st.expander("URLs"):
+    data = db.get_all_start_urls()
+    for entry in data:
+        entry["checked"] = st.checkbox(entry["url"])
+    deletedUrl = st.button("Delete Selected", key="del_url")
+    if deletedUrl:
+        for entry in data:
+            if entry["checked"]:
+                db.delete_from_table(Database.Table.starturls.value, entry["id"])
+        st.experimental_rerun()
+
+with st.form(key="allowed_domain", clear_on_submit=True):
+    domain = st.text_input("Domain")
+    submittedDomain = st.form_submit_button("Submit")
+if submittedDomain:
+    if db.insert_single_into_single_table(Database.Table.alloweddomains.value, (domain,)):
+        st.sidebar.success("Added entry into Database")
+    else:
+        st.sidebar.error("An Error occured. Please try again later")
+
+with st.expander("Domains"):
+    data = db.get_all_allowed_domains()
+    for entry in data:
+        entry["checked"] = st.checkbox(entry["domain"])
+    deletedDomain = st.button("Delete Selected", key="del_domain")
+    if deletedDomain:
+        for entry in data:
+            if entry["checked"]:
+                db.delete_from_table(Database.Table.alloweddomains.value, entry["id"])
+        st.experimental_rerun()
