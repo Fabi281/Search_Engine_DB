@@ -268,7 +268,7 @@ class Database:
                 from
                     selected_word_relations
                 )
-            ) * {weight_tfidf} + {1-weight_tfidf} * (
+            ) * {weight_tfidf} + {1-weight_tfidf} * LOG((
                 SELECT
                 COUNT(DISTINCT selected_word_relations.link_id)
                 from
@@ -276,7 +276,7 @@ class Database:
                 join selected_word_relations on selected_word_relations.url = backlinks.url_to
                 WHERE
                 backlinks.url_to = selected_word_relations.url
-            ) / (
+            )) / LOG((
                 SELECT
                 MAX(count)
                 FROM
@@ -288,7 +288,7 @@ class Database:
                     GROUP BY
                     backlinks.url_to
                 ) AS backlinks_count
-            ) as ranking,
+            )) as ranking,
             selected_word_relations.url
             from
             selected_word_relations
