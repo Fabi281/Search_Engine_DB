@@ -1,5 +1,12 @@
 FROM python:3.9-slim-buster
 
+RUN apt-get update
+
+# install build tools
+RUN apt-get install -y build-essential
+RUN apt-get install -y python3-numpy libicu-dev python3-icu
+RUN apt-get install -y libmariadb3 libmariadb-dev
+
 WORKDIR /app
 
 COPY requirements.txt .
@@ -7,7 +14,5 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 WORKDIR /app/website
-
-EXPOSE 8501
 
 ENTRYPOINT ["streamlit", "run", "main.py"]

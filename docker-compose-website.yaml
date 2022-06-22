@@ -3,4 +3,10 @@ services:
   scraper:
     build:
       context: .
-      dockerfile: dockerfile_website
+      dockerfile: ./Dockerfile_website
+    volumes:
+      - ./website:/app/website
+      - ./DB:/app/DB
+    env_file:
+      - ./DB/.env
+    network_mode: host

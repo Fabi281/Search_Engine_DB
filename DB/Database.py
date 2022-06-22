@@ -28,11 +28,11 @@ class Database:
     def __init__(self):
         try:
             self.conn = pymysql.connect(
-                user=env("user"),
-                password=env("password"),
+                user=env("MYSQL_USER"),
+                password=env("MYSQL_PASSWORD"),
                 host=env("host"),
                 port=int(env("port")),
-                database=env("database"),
+                database=env("MYSQL_DATABASE"),
                 autocommit=True
             )
             self.cur = self.conn.cursor()
