@@ -20,7 +20,7 @@ class AlreadyIndexedMiddleware(object):
         timestamp_f = timestamp.timestamp()
 
         # older then 1 day
-        if timestamp_f > (time.time() - 86400):
+        if timestamp_f > (time.time() - spider.update_after):
             msg = "Ignoring request {}, was already seen less then 1 day ago".format(response.url)
             spider.logger.debug(msg)
             raise IgnoreRequest("Already indexed")
