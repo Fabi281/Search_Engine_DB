@@ -239,7 +239,8 @@ class Database:
             SELECT
                 wordrelation.link_id,
                 wordrelation.weight,
-                link.url
+                link.url,
+                link.title
             FROM
                 wordrelation
                 JOIN word on word.id = wordrelation.word_id
@@ -289,7 +290,8 @@ class Database:
                     backlinks.url_to
                 ) AS backlinks_count
             )) as ranking,
-            selected_word_relations.url
+            selected_word_relations.url,
+            selected_word_relations.title
             from
             selected_word_relations
             order by
