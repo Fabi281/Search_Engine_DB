@@ -12,7 +12,6 @@ class Database:
     '''
     On Initialization: Establishes a Connection to a MariaDB Database and creates the required Tables if they do not exist.
     This Object formats everything as it needs to be, you just need to pass the data and table-type which is stored in the "Table" Enum.
-    You can: Test your connection, insert a single value, insert multiple values and perform any query (single only).
     The Connection is closed at the end of the program or when the object is deleted.
     '''
     conn = ""
@@ -52,13 +51,16 @@ class Database:
     def __del__(self):
         self.conn.close()
 
-    def delete_domain(self, domain):
-        '''Deletes a domain from the alloweddomains table'''
-        self.cur.execute(f"DELETE FROM alloweddomains WHERE domain = '{domain}'")
-
-    def delete_word_relation(self, link_id):
-        '''Deletes all word relations for a given link_id'''
-        self.cur.execute(f"DELETE FROM wordrelation WHERE link_id = {link_id}")
+    def delete_from_table(self, table, id):
+        '''
+        Deletes a row from a table.
+        Example: delete_from_table(Database.Table.word.value, 1) => deletes the word with id 1
+                delete_from_table(Database.Table.wordrelation.value, [1,2]) => deletes the wordrelation with link_id 1 and word_id 2
+        '''
+        if(table == Database.Table.wordrelation.value):
+            self.cur.execute(f"DELETE FROM wordrelation WHERE link_id = {id[0]} AND word_id = {id[1]}")
+        else:
+            self.cur.execute(f"DELETE FROM {table} WHERE id = {id}")        
     
     def update_timestamp(self, link_id):
         '''Updates the timestamp of a link'''
@@ -72,14 +74,19 @@ class Database:
         return None
     
     def get_all_start_urls(self):
-        '''Returns all start urls'''
-        results = self.get_from_query("SELECT url FROM starturls")
-        return [result[0] for result in results]
+        '''Returns all start urls and ids'''
+        results = self.get_from_query("SELECT id, url FROM starturls")
+        return [{"id": result[0], "url": result[1]} for result in results]
     
     def get_all_allowed_domains(self):
-        '''Returns a list of all allowed domains'''
-        results = self.get_from_query("SELECT domain FROM alloweddomains")
-        return [result[0] for result in results]
+        '''Returns a list of all allowed domains and ids'''
+        results = self.get_from_query("SELECT id, domain FROM alloweddomains")
+        return [{"id": result[0], "domain": result[1]}  for result in results]
+
+    def get_all_languages(self):
+        '''Returns a list of all languages and ids'''
+        results = self.get_from_query("SELECT id, language FROM link")
+        return [{"id": result[0], "language": result[1]} for result in results]
 
     def get_from_query(self, query):
         try:
@@ -196,10 +203,6 @@ class Database:
                 f"SELECT id FROM alloweddomains WHERE alloweddomains.domain IN ({valuelist}) ORDER BY FIELD(alloweddomains.domain,{valuelist})")
 
         return id
-
-    def get_all_languages(self):
-        '''Returns a list of all languages'''
-        return self.get_from_query("SELECT DISTINCT language FROM link")
 
     def search_db_with_query(self, query, language, page=1, limit=10):
         '''Returns a list of all links that contain the search query'''
