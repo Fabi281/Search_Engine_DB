@@ -36,28 +36,26 @@ class MySpider(scrapy.Spider):
         self.allowed_domains = allowed_domains
 
     def get_db(self):
+        """ Returns the database instance """
         return self.db
 
     def parse(self, response):
-        # # save url to pages.txt
-        # with open('pages.txt', 'a') as f:
-        #     f.write(response.url + '\n')
-
 
         # extract all text from website using beautifulsoup
         soup = BeautifulSoup(response.text, features="lxml")
         text = soup.getText(" ")
+
+        # also extract the title, and append it to the text
         if soup.title is not None:
             text = soup.title.text + " " + text
         else:
             print("No title found for " + response.url)
 
-        # remove bad characters
+        # remove bad characters, as they are not supported by the language model
         text = RE_BAD_CHARS.sub(" ", text)
 
-        # detect language of website
+        # detect language of website using polyglot
         detector = Detector(text)
-
         language = detector.language.name.lower()
         
         if language == "english":
@@ -65,21 +63,23 @@ class MySpider(scrapy.Spider):
         elif language == "german":
             nlp = nlp_de
         else:
+            # use english as fallback
             nlp = nlp_en
         
+        # tokenize text, lematize it and analyze words
         doc = nlp(text)
 
-        # get all lemmas
+        # filter lemmas to only include alphanumeric words, and remove stopwords
         lemmas = [token.lemma_.lower() for token in doc if token.is_alpha == True and token.is_stop == False]
 
-        # count words in text
+        # count word occurenes in text
         word_count = {}
         for word in lemmas:
             if word in word_count:
                 word_count[word] += 1
             else:
                 word_count[word] = 1
-
+        
         words = [(word,) for word in word_count]
         if len(words) > 0:
             word_ids = self.db.insert_multiple_into_single_table(Database.Table.word.value, words)
@@ -91,14 +91,9 @@ class MySpider(scrapy.Spider):
             except Exception as e:
                 print(e)
                 print(word_map[0])
-                
 
-
-        # save sorted word count to pages/{language}/{url}.txt´
-        # os.makedirs('pages/' + language, exist_ok=True)
-        # with open(f'pages/{language}/{response.url.replace("/", "_")}.txt', 'w') as f:
-        #     for word in sorted(word_count, key=word_count.get, reverse=True):
-        #         f.write(f'{word}: {word_count[word]}\n')
+            # update timestamp for url
+            self.db.update_timestamp(link_id)
 
 
         for href in response.xpath('//a/@href').getall():
@@ -108,21 +103,25 @@ class MySpider(scrapy.Spider):
 
 
 if __name__ == "__main__":
+
+    # Configuration for Scrapy crawler
     process = CrawlerProcess({
-        'USER_AGENT': 'Mozilla/5.0 (compatible; StudentBot; https://www.heidenheim.dhbw.de/)',
+        'USER_AGENT': 'Mozilla/5.0 (compatible; StudentBot; https://www.heidenheim.dhbw.de/)',  # Mozilla 5.0 -> Standard for most crawlers
         'LOG_LEVEL': 'DEBUG',
-        'ROBOTSTXT_OBEY': True,
-        'ROBOTSTXT_USER_AGENT': '*',
-        'SPIDER_MIDDLEWARES': {
-            'scraper.MimeFilterMiddleware.MimeFilterMiddleware': 999,
-            'scraper.AlreadyIndexedMiddleware.AlreadyIndexedMiddleware': 998,
+        'ROBOTSTXT_OBEY': True,      # Load the robots.txt file and obey the rules in there
+        'ROBOTSTXT_USER_AGENT': '*', # that apply to all bots
+        'SPIDER_MIDDLEWARES': {      # Custom middlewares for the spider
+            'scraper.MimeFilterMiddleware.MimeFilterMiddleware': 999,          # Filter out non-text mime types like images, pdf, or other files
+            'scraper.AlreadyIndexedMiddleware.AlreadyIndexedMiddleware': 998,  # Filter out already indexed pages
         },
         'CONCURRENT_REQUESTS': 32,
         'CONCURRENT_REQUESTS_PER_DOMAIN': 32,
 
     })
 
+    # connect to database
     db = Database()
+
     # setup start urls
     start_urls = db.get_all_start_urls()
 
@@ -130,7 +129,6 @@ if __name__ == "__main__":
         start_urls_env = env("START_URLS")
         start_urls = start_urls_env.split(";")
         db.insert_multiple_into_single_table(Database.Table.starturls.value, [(url,) for url in start_urls])
-
 
     start_urls = db.get_all_start_urls()
 
@@ -142,13 +140,16 @@ if __name__ == "__main__":
         allowed_domains = allowed_domains_env.split(";")
         db.insert_multiple_into_single_table(Database.Table.alloweddomains.value, [(domain,) for domain in allowed_domains])
 
-
     allowed_domains = db.get_all_allowed_domains()
 
+    # create crawler based on above Spider class
     crawler = process.create_crawler(MySpider)
     process.crawl(crawler, allowed_domains, start_urls, db)
     process.start()
 
+    # retrieve the crawlers stats
     stats_obj = crawler.stats
     stats_dict = crawler.stats.get_stats()
-    print(stats_dict)
+    print("=========== Crawler finished ==========")
+    for key in stats_dict:
+        print(key + ": " + str(stats_dict[key]))
