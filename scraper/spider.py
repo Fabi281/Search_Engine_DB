@@ -99,7 +99,6 @@ class MySpider(scrapy.Spider):
                 print(word_map[0])
 
             # update timestamp for url
-            print(link_id)
             self.db.update_timestamp(link_id)
 
         urls_to_scrape = []
