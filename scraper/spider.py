@@ -163,6 +163,8 @@ if __name__ == "__main__":
     if len(start_urls) == 0:
         start_urls_env = env("START_URLS")
         start_urls = start_urls_env.split(";")
+        # remove empty strings
+        start_urls = [url for url in start_urls if url.strip() != ""]
         db.insert_multiple_into_single_table(Database.Table.starturls.value, [(url,) for url in start_urls])
 
     start_urls = [result["url"] for result in db.get_all_start_urls()]
@@ -173,6 +175,8 @@ if __name__ == "__main__":
     if len(allowed_domains) == 0:
         allowed_domains_env = env("ALLOWED_DOMAINS")
         allowed_domains = allowed_domains_env.split(";")
+        #remove empty strings
+        allowed_domains = [domain for domain in allowed_domains if domain.strip() != ""]
         db.insert_multiple_into_single_table(Database.Table.alloweddomains.value, [(domain,) for domain in allowed_domains])
 
     allowed_domains = [result["domain"] for result in db.get_all_allowed_domains()]
