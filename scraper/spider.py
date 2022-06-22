@@ -34,6 +34,11 @@ class MySpider(scrapy.Spider):
         self.db = db_instance
         self.start_urls = start_urls
         self.allowed_domains = allowed_domains
+        update_after_s = env("UPDATE_AFTER")
+        if update_after_s is not None:
+            self.update_after = parse_duration(update_after_s)
+        else:
+            self.update_after = 0
 
     def get_db(self):
         """ Returns the database instance """
@@ -79,20 +84,21 @@ class MySpider(scrapy.Spider):
                 word_count[word] += 1
             else:
                 word_count[word] = 1
-        
+
         words = [(word,) for word in word_count]
         if len(words) > 0:
             word_ids = self.db.insert_multiple_into_single_table(Database.Table.word.value, words)
             word_map = zip(words, word_ids)
-            link_id = self.db.insert_single_into_single_table(Database.Table.link.value, (response.url, language, soup.title.string))
+            link_id = self.db.insert_single_into_single_table(Database.Table.link.value, (response.url, language, soup.title.string))[0][0]
             try:
                 self.db.insert_multiple_into_single_table(Database.Table.wordrelation.value,
-                [(word_id[0], link_id[0][0], word_count[word]) for ((word,), word_id) in word_map])
+                [(word_id[0], link_id, word_count[word]) for ((word,), word_id) in word_map])
             except Exception as e:
                 print(e)
                 print(word_map[0])
 
             # update timestamp for url
+            print(link_id)
             self.db.update_timestamp(link_id)
 
 
@@ -101,13 +107,34 @@ class MySpider(scrapy.Spider):
                 url = response.urljoin(href)
                 yield scrapy.Request(url, callback=self.parse)
 
+# parse duration
+def parse_duration(update_after_s):
+    update_after_int = update_after_s[:-1]
+    update_after_unit = update_after_s[-1]
+    if update_after_unit == "s":
+        seconds = int(update_after_int)
+    elif update_after_unit == "m":
+        seconds = int(update_after_int) * 60
+    elif update_after_unit == "h":
+        seconds = int(update_after_int) * 60 * 60
+    elif update_after_unit == "d":
+        seconds = int(update_after_int) * 60 * 60 * 24
+    elif update_after_unit == "w":
+        seconds = int(update_after_int) * 60 * 60 * 24 * 7
+    elif update_after_unit == "M":
+        seconds = int(update_after_int) * 60 * 60 * 24 * 30
+    elif update_after_unit == "y":
+        seconds = int(update_after_int) * 60 * 60 * 24 * 365
+    else:
+        seconds = 0
+    return seconds
 
 if __name__ == "__main__":
 
     # Configuration for Scrapy crawler
     process = CrawlerProcess({
         'USER_AGENT': 'Mozilla/5.0 (compatible; StudentBot; https://www.heidenheim.dhbw.de/)',  # Mozilla 5.0 -> Standard for most crawlers
-        'LOG_LEVEL': 'DEBUG',
+        'LOG_LEVEL': 'WARNING',
         'ROBOTSTXT_OBEY': True,      # Load the robots.txt file and obey the rules in there
         'ROBOTSTXT_USER_AGENT': '*', # that apply to all bots
         'SPIDER_MIDDLEWARES': {      # Custom middlewares for the spider
@@ -123,24 +150,24 @@ if __name__ == "__main__":
     db = Database()
 
     # setup start urls
-    start_urls = db.get_all_start_urls()
+    start_urls = [result["url"] for result in db.get_all_start_urls()]
 
     if len(start_urls) == 0:
         start_urls_env = env("START_URLS")
         start_urls = start_urls_env.split(";")
         db.insert_multiple_into_single_table(Database.Table.starturls.value, [(url,) for url in start_urls])
 
-    start_urls = db.get_all_start_urls()
+    start_urls = [result["url"] for result in db.get_all_start_urls()]
 
     # setup allowed domains
-    allowed_domains = db.get_all_allowed_domains()
+    allowed_domains = [result["domain"] for result in db.get_all_allowed_domains()]
 
     if len(allowed_domains) == 0:
         allowed_domains_env = env("ALLOWED_DOMAINS")
         allowed_domains = allowed_domains_env.split(";")
         db.insert_multiple_into_single_table(Database.Table.alloweddomains.value, [(domain,) for domain in allowed_domains])
 
-    allowed_domains = db.get_all_allowed_domains()
+    allowed_domains = [result["domain"] for result in db.get_all_allowed_domains()]
 
     # create crawler based on above Spider class
     crawler = process.create_crawler(MySpider)
