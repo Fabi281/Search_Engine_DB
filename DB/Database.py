@@ -12,7 +12,6 @@ class Database:
     '''
     On Initialization: Establishes a Connection to a MariaDB Database and creates the required Tables if they do not exist.
     This Object formats everything as it needs to be, you just need to pass the data and table-type which is stored in the "Table" Enum.
-    You can: Test your connection, insert a single value, insert multiple values and perform any query (single only).
     The Connection is closed at the end of the program or when the object is deleted.
     '''
     conn = ""
@@ -77,6 +76,10 @@ class Database:
         '''Returns a list of all allowed domains'''
         results = self.get_from_query("SELECT domain FROM alloweddomains")
         return [result[0] for result in results]
+
+    def get_all_languages(self):
+        '''Returns a list of all languages'''
+        return self.get_from_query("SELECT DISTINCT language FROM link")
 
     def get_from_query(self, query):
         try:
@@ -193,10 +196,6 @@ class Database:
                 f"SELECT id FROM alloweddomains WHERE alloweddomains.domain IN ({valuelist}) ORDER BY FIELD(alloweddomains.domain,{valuelist})")
 
         return id
-
-    def get_all_languages(self):
-        '''Returns a list of all languages'''
-        return self.get_from_query("SELECT DISTINCT language FROM link")
 
     def search_db_with_query(self, query, language, page=1, limit=10):
         '''Returns a list of all links that contain the search query'''
