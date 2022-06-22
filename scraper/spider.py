@@ -85,6 +85,7 @@ class MySpider(scrapy.Spider):
             else:
                 word_count[word] = 1
 
+        link_id = None
         words = [(word,) for word in word_count]
         if len(words) > 0:
             word_ids = self.db.insert_multiple_into_single_table(Database.Table.word.value, words)
@@ -101,30 +102,38 @@ class MySpider(scrapy.Spider):
             print(link_id)
             self.db.update_timestamp(link_id)
 
-
+        urls_to_scrape = []
+        backlinks_to_insert = []
         for href in response.xpath('//a/@href').getall():
             if not(href.startswith('tel') or href.startswith('javascript') or href.startswith('mailto') or href.startswith('webcal')):
                 url = response.urljoin(href)
-                yield scrapy.Request(url, callback=self.parse)
+                urls_to_scrape.append(url)
+                backlinks_to_insert.append((link_id, url))
+                
+        if link_id is not None:
+            self.db.insert_multiple_into_single_table(Database.Table.backlinks.value, backlinks_to_insert)
+        
+        for url in urls_to_scrape:
+            yield scrapy.Request(url, callback=self.parse)
 
 # parse duration
 def parse_duration(update_after_s):
-    update_after_int = update_after_s[:-1]
+    update_after_int = int(update_after_s[:-1])
     update_after_unit = update_after_s[-1]
     if update_after_unit == "s":
-        seconds = int(update_after_int)
+        seconds = update_after_int
     elif update_after_unit == "m":
-        seconds = int(update_after_int) * 60
+        seconds = update_after_int * 60
     elif update_after_unit == "h":
-        seconds = int(update_after_int) * 60 * 60
+        seconds = update_after_int * 60 * 60
     elif update_after_unit == "d":
-        seconds = int(update_after_int) * 60 * 60 * 24
+        seconds = update_after_int * 60 * 60 * 24
     elif update_after_unit == "w":
-        seconds = int(update_after_int) * 60 * 60 * 24 * 7
+        seconds = update_after_int * 60 * 60 * 24 * 7
     elif update_after_unit == "M":
-        seconds = int(update_after_int) * 60 * 60 * 24 * 30
+        seconds = update_after_int * 60 * 60 * 24 * 30
     elif update_after_unit == "y":
-        seconds = int(update_after_int) * 60 * 60 * 24 * 365
+        seconds = update_after_int * 60 * 60 * 24 * 365
     else:
         seconds = 0
     return seconds
@@ -137,7 +146,7 @@ if __name__ == "__main__":
         'LOG_LEVEL': 'WARNING',
         'ROBOTSTXT_OBEY': True,      # Load the robots.txt file and obey the rules in there
         'ROBOTSTXT_USER_AGENT': '*', # that apply to all bots
-        'SPIDER_MIDDLEWARES': {      # Custom middlewares for the spider
+        'SPIDER_MIDDLEWARES': {                                                # Custom middlewares for the spider
             'scraper.MimeFilterMiddleware.MimeFilterMiddleware': 999,          # Filter out non-text mime types like images, pdf, or other files
             'scraper.AlreadyIndexedMiddleware.AlreadyIndexedMiddleware': 998,  # Filter out already indexed pages
         },
