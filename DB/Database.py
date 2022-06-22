@@ -138,7 +138,9 @@ class Database:
         the same pattern.
         Example: insert_multiple_into_single_table(Database.Table.word.value, [("wordTuple1",), ("wordTuple2",)]) => <word>
                  insert_multiple_into_single_table(Database.Table.link.value, [("www.stackoverflow.com/", "German"), ("www.youtube.com", "English")]) => ("<url>", "<language>")])
-                 insert_multiple_into_single_table(Database.Table.wordrelation.value, [(1, 1, 1), (2, 2, 2)]) => (<word_id>, <link_id>, <weight>)   
+                 insert_multiple_into_single_table(Database.Table.wordrelation.value, [(1, 1, 1), (2, 2, 2)]) => (<word_id>, <link_id>, <weight>)
+                 insert_multiple_into_single_table(Database.Table.starturls.value, [("https://www.stackoverflow.com",), ("https://www.youtube.com",)]) => <starturl>   
+                 insert_multiple_into_single_table(Database.Table.alloweddomains.value, [("www.stackoverflow.com",), ("www.youtube.com",)]) => <alloweddoamain>   
         '''
 
         id = None
