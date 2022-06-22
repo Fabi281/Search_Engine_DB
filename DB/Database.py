@@ -132,7 +132,7 @@ class Database:
                 f'SELECT id FROM alloweddomains WHERE alloweddomains.domain = "{self.conn.escape_string(value[0])}"')
         elif(table == self.Table.backlinks.value):
             id = self.get_from_query(
-                f'SELECT link_id_from, url_to FROM backlinks WHERE backlinks.link_id_from = {value[0]} AND backlinks.url_to = {self.conn.escape_string(value[1])}')
+                f'SELECT link_id_from, url_to FROM backlinks WHERE backlinks.link_id_from = {value[0]} AND backlinks.url_to = "{self.conn.escape_string(value[1])}"')
 
         return id
 
@@ -220,7 +220,7 @@ class Database:
         if(table == Database.Table.wordrelation.value):
             self.cur.execute(f"DELETE FROM wordrelation WHERE link_id = {id[0]} AND word_id = {id[1]}")
         elif(table == Database.Table.backlinks.value):
-            self.cur.execute(f"DELETE FROM backlinks WHERE link_id_from = {id[0]} AND url_to = {self.conn.escape_string(id[1])}")
+            self.cur.execute(f'DELETE FROM backlinks WHERE link_id_from = {id[0]} AND url_to = "{self.conn.escape_string(id[1])}"')
         else:
             self.cur.execute(f"DELETE FROM {table} WHERE id = {id}")   
 
