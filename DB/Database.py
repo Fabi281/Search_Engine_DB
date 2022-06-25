@@ -310,6 +310,14 @@ class Database:
         """)
         return [{'url': result[1], 'rank': result[0], 'title': result[2]} for result in results]
 
+    def predict_words_for_query(self, query):
+        words = query.split(' ')
+        # predict_word for each word 
+        res = [self.predict_word(word) for word in words]
+        # flatten
+        res = [word for word_list in res for word in word_list]
+        return res
+
     def predict_word(self, word):
         results = self.get_from_query(f"""
         SELECT
@@ -317,18 +325,8 @@ class Database:
         from
             word
         where
-            word like '{self.conn.escape_string(word)}%';
-        """)
-        return [result[0] for result in results]
-
-    def predict_word2(self, word):
-        results = self.get_from_query(f"""
-        SELECT
-            word
-        from
-            word
-        where
-            MATCH (word) AGAINST ('{self.conn.escape_string(word)}' in boolean mode);
+            MATCH (word) AGAINST ('{self.conn.escape_string(word)}' in boolean mode)
+        LIMIT 6;
         """)
         return [result[0] for result in results]
 

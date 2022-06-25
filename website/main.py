@@ -52,6 +52,10 @@ def print_urls(df):
     st.write(df.to_html(escape = False, col_space=dict(title=300)), unsafe_allow_html = True)
 
 if not st.session_state['query'] == "":
+    with st.expander("Word suggestions"):
+        for word in db.predict_words_for_query(st.session_state['query']):
+            st.markdown(" - "+word)
+
     st.markdown("Results for `" + st.session_state['query'] + "`:")
     col1, col2, col3 = st.columns(3)
     with col1:
