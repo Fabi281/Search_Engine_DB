@@ -9,4 +9,11 @@ services:
       - ./DB:/app/DB
     env_file:
       - ./DB/.env
-    network_mode: host
+    networks:
+      - db_search_enginge
+    ports:
+      - "8501:8501"
+    command: ["--browser.serverAddress", "localhost"]
+
+networks:
+  db_search_enginge:

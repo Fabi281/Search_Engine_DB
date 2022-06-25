@@ -7,6 +7,10 @@ services:
     env_file:
       - ./DB/.env
       - ./scraper/.env
-    network_mode: host
+    networks:
+      - db_search_enginge
     volumes:
       - .:/app
+
+networks:
+  db_search_enginge:

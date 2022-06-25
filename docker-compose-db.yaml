@@ -9,8 +9,8 @@ services:
     restart: on-failure
     volumes:
       - db_search_enginge:/var/lib/mysql
-    ports:
-      - "3306:3306"
+    networks:
+      - db_search_enginge
     command: "--ngram_token_size=4 --innodb_ft_enable_stopword=off"
 
   phpmyadmin:
@@ -24,6 +24,11 @@ services:
       - PMA_PASSWORD=root
     depends_on:
       - database
+    networks:
+      - db_search_enginge
 
 volumes:
+  db_search_enginge:
+
+networks:
   db_search_enginge:
