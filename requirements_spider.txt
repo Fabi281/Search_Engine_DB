@@ -1,6 +1,4 @@
-streamlit~=1.10.0
 environs~=9.5.0
-mariadb
 scrapy~=2.6.1
 beautifulsoup4~=4.11.1
 polyglot

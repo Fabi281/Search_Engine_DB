@@ -1,6 +1,6 @@
 version: "3.7"
 services:
-  mariadb:
+  database:
     image: mysql:8.0
     env_file:
       - ./DB/.env
@@ -8,10 +8,10 @@ services:
       MYSQL_ROOT_PASSWORD: "root"
     restart: on-failure
     volumes:
-      - mariadb_db_search_enginge:/var/lib/mysql
+      - db_search_enginge:/var/lib/mysql
     ports:
       - "3306:3306"
-    command: "--ngram_token_size=4"
+    command: "--ngram_token_size=4 --innodb_ft_enable_stopword=off"
 
   phpmyadmin:
     image: phpmyadmin
@@ -19,11 +19,11 @@ services:
     ports:
       - 8080:80
     environment:
-      - PMA_HOST=mariadb
+      - PMA_HOST=database
       - PMA_USER=root
       - PMA_PASSWORD=root
     depends_on:
-      - mariadb
+      - database
 
 volumes:
-  mariadb_db_search_enginge:
+  db_search_enginge:

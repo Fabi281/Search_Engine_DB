@@ -7,11 +7,10 @@ RUN apt-get update
 # install build tools
 RUN apt-get install -y build-essential
 RUN apt-get install -y python3-numpy libicu-dev python3-icu
-RUN apt-get install -y libmariadb3 libmariadb-dev
 
-COPY requirements.txt .
+COPY requirements_spider.txt .
 
-RUN pip install -r requirements.txt
+RUN pip install -r requirements_spider.txt
 
 RUN python -m spacy download en_core_web_sm
 RUN python -m spacy download de_core_news_sm
