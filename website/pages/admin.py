@@ -12,7 +12,7 @@ st.title('Admin')
 db = Database()
 
 with st.form(key="start_url", clear_on_submit=True):
-    url = st.text_input("URL")
+    url = st.text_input("Add entrypoint URL")
     addUrl = st.form_submit_button("Insert")
 if addUrl:
     if validators.url(url):
@@ -23,7 +23,7 @@ if addUrl:
     else:
         st.sidebar.error("URL is not valid")
 
-with st.expander("URLs"):
+with st.expander("Entrypoint URLs"):
     data = db.get_all_start_urls()
     for entry in data:
         entry["checked"] = st.checkbox(entry["url"])
@@ -35,7 +35,7 @@ with st.expander("URLs"):
         st.experimental_rerun()
 
 with st.form(key="allowed_domain", clear_on_submit=True):
-    domain = st.text_input("Domain")
+    domain = st.text_input("Add allowlisted domain")
     submittedDomain = st.form_submit_button("Submit")
 if submittedDomain:
     if db.insert_single_into_single_table(Database.Table.alloweddomains.value, (domain,)):
@@ -43,7 +43,7 @@ if submittedDomain:
     else:
         st.sidebar.error("An Error occured. Please try again later")
 
-with st.expander("Domains"):
+with st.expander("Allowlisted domains"):
     data = db.get_all_allowed_domains()
     for entry in data:
         entry["checked"] = st.checkbox(entry["domain"])
