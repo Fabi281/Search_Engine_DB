@@ -1,6 +1,6 @@
 version: "3.7"
 services:
-  scraper:
+  website:
     build:
       context: .
       dockerfile: ./Dockerfile_website

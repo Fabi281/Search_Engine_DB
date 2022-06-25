@@ -10,6 +10,7 @@ st.sidebar.title('Main')
 
 db = Database()
 df = pd.DataFrame()
+columns_titles = ["title","url","rank"]
 
 if 'query' not in st.session_state:
     st.session_state['query'] = ""
@@ -39,6 +40,16 @@ def update_dataframe():
                                               page=st.session_state['page']))
     return df
 
+def style_table(styler):
+    styler.set_table_styles([dict(selector='th', props=[('text-align', 'left')])])
+    styler.format(dict(url= lambda x: f'<a href="{x}">{x}</a>'))
+
+    return styler
+
+def print_urls(df):
+    df = df.reindex(columns=columns_titles)
+    df = df.style.pipe(style_table)
+    st.write(df.to_html(escape = False, col_space=dict(title=300)), unsafe_allow_html = True)
 
 if not st.session_state['query'] == "":
     st.markdown("Results for `" + st.session_state['query'] + "`:")
@@ -56,4 +67,5 @@ if not st.session_state['query'] == "":
 
     with col3:
         st.write("Page: " + str(st.session_state['page']))
-    st.dataframe(update_dataframe())
+    
+    print_urls(update_dataframe())
