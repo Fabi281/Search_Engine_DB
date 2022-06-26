@@ -31,5 +31,5 @@ You can deploy this application with the following steps:
 | MYSQL_DATABASE      | "Databasename"       |
 
 1. Run Docker Compose on the docker-compose-db.yaml, this creates the mysql-database with the right tables, constraints and so on and a phpmyadmin interface (Note: Sometimes it takes a while after starting to initialize the database. If you get an Error when trying to access it via PHPMyAdmin just give it a minute or two and try again)
-2. ONLY CONTINUE IF THE PREVIOUS STEP IS DONE (AND IN PHPMYADMIN EXISTS AN EMPTY DATABSE). Run Docker Compose on the docker-compose-spider.yaml to run the scraper which fills the database
+2. ONLY CONTINUE IF THE PREVIOUS STEP IS DONE (AND IF THERE IS THE DATABSE IN PHPMYADMIN). Run Docker Compose on the docker-compose-spider.yaml to run the scraper which fills the database
 3. Run Docker Compose on the docker-compose-website.yaml to run the frontend with admin and user interface
