@@ -26,7 +26,7 @@ You can deploy this application with the following steps:
 | ----------- | ----------- |
 | MYSQL_USER      | "Username"       |
 | MYSQL_PASSWORD   | "Password"        |
-| host      | "127.0.0.1"       |
+| host      | "database"       |
 | port   | 3306        |
 | MYSQL_DATABASE      | "Databasename"       |
 
