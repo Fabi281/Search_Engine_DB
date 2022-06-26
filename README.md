@@ -2,7 +2,7 @@
 This is a small project to recreate a small scale search engine using python.
 
 We scrape each website in a starturl database for links to other websites. And
-recursivly search them aswell. The scraping process is limited to allowed Domains in 
+recursivly search them aswell. The scraping process is limited to allowed Domains which are stored in
 another database which can all be customized inside a streamlit website.
 
 The Project is structured as follows:
